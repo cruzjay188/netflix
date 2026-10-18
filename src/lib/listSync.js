@@ -2,7 +2,15 @@
 // The reducer stays the source of truth; we diff each new state against the last synced one
 // and send only the rows that changed, so every reducer action syncs without extra wiring.
 
+import { getUserId } from './session.js'
+
 const iso = (ms) => new Date(ms).toISOString()
+
+// Throws the error from a supabase-js response so a failed write stops the batch.
+export async function check(promise) {
+  const { error } = await promise
+  if (error) throw error
+}
 
 export function entryToRow(userId, showId, entry) {
   return { user_id: userId, show_id: showId, status: entry.status, rating: entry.rating, added_at: iso(entry.addedAt) }
@@ -66,31 +74,9 @@ export function isEmptyDiff(ops) {
 }
 
 export function createRemote(client) {
-  let userPromise = null
-
-  // One anonymous user per browser; supabase-js keeps the session in localStorage.
-  function getUserId() {
-    userPromise ??= (async () => {
-      const { data } = await client.auth.getSession()
-      if (data.session) return data.session.user.id
-      const { data: signIn, error } = await client.auth.signInAnonymously()
-      if (error) throw error
-      return signIn.user.id
-    })().catch((err) => {
-      userPromise = null // allow a retry next time
-      throw err
-    })
-    return userPromise
-  }
-
-  async function check(promise) {
-    const { error } = await promise
-    if (error) throw error
-  }
-
   return {
     async load() {
-      await getUserId()
+      await getUserId(client)
       const [entries, comments] = await Promise.all([
         client.from('list_entries').select('*'),
         client.from('list_comments').select('*'),
@@ -102,7 +88,7 @@ export function createRemote(client) {
 
     async apply(ops) {
       if (isEmptyDiff(ops)) return
-      const userId = await getUserId()
+      const userId = await getUserId(client)
       // Order matters: comments reference entries.
       if (ops.upsertEntries.length) {
         await check(

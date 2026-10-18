@@ -117,3 +117,6 @@ export const SHOWS_BY_ID = Object.fromEntries(SHOWS.map((s) => [s.id, s]))
 
 // What "My List" starts with on a fresh browser.
 export const STARTER_LIST = ['stranger-things', 'wednesday', 'avatar', 'the-last-dance', 'brooklyn-nine-nine']
+
+// Genres a user can pick for their own titles. Must match the rows in the Supabase `genres` table.
+export const GENRES = [...new Set(SHOWS.map((s) => s.genre))].sort()

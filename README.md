@@ -2,7 +2,11 @@
 
 My own version of Netflix, personalized around the shows and activities I'm into.
 
-The first section is **My List**: save shows, rate them 1–5 stars, leave comments (with spoiler protection), track whether you're watching or finished, and filter/sort your list. Your list syncs to **Supabase** (and is also saved in the browser, so it works offline).
+The first section is **My List**: save shows, rate them 1–5 stars, leave comments (with spoiler protection), track whether you're watching or finished, and filter/sort your list.
+
+You can also **add your own movies and series** that aren't in the catalog, and make **your own lists** ("Comfort shows", "Watch with Dad"…) to group titles however you like.
+
+Everything syncs to **Supabase** (and is also saved in the browser, so it works offline).
 
 ## Run it
 
@@ -26,9 +30,9 @@ npm run build   # production build
 ```
 src/
   data/         show catalog (shows.js)
-  utils/        pure helpers (filter, sort, average, timeAgo)
-  hooks/        useMyList: list state, localStorage, Supabase sync
-  lib/          Supabase client + row ⇄ state sync
+  utils/        pure helpers (filter, sort, average, timeAgo, show form, list names)
+  hooks/        useMyList (My List) + useLibrary (your titles and lists): state, localStorage, Supabase sync
+  lib/          Supabase client, shared sign-in + write queue, row ⇄ state sync
   views/        pages (MyList)
   components/   reusable UI (cards, modal, stars, comments, …)
   styles/       global.css

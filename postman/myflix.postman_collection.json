@@ -6,7 +6,13 @@
   },
   "auth": {
     "type": "bearer",
-    "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }]
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{accessToken}}",
+        "type": "string"
+      }
+    ]
   },
   "event": [
     {
@@ -42,10 +48,20 @@
             }
           ],
           "request": {
-            "auth": { "type": "noauth" },
+            "auth": {
+              "type": "noauth"
+            },
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{}" },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
             "url": "{{baseUrl}}/auth/v1/signup",
             "description": "Creates a new anonymous user (anonymous sign-ins must be enabled in Supabase). Saves the tokens to the environment."
           }
@@ -67,17 +83,30 @@
             }
           ],
           "request": {
-            "auth": { "type": "noauth" },
+            "auth": {
+              "type": "noauth"
+            },
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{ \"refresh_token\": \"{{refreshToken}}\" }" },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"refresh_token\": \"{{refreshToken}}\" }"
+            },
             "url": "{{baseUrl}}/auth/v1/token?grant_type=refresh_token",
             "description": "Access tokens expire after an hour. Run this to get a new one without creating a new user."
           }
         },
         {
           "name": "Get current user",
-          "request": { "method": "GET", "url": "{{baseUrl}}/auth/v1/user" }
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/auth/v1/user"
+          }
         }
       ]
     },
@@ -93,7 +122,10 @@
         },
         {
           "name": "List genres",
-          "request": { "method": "GET", "url": "{{baseUrl}}/rest/v1/genres?select=*&order=name" }
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/rest/v1/genres?select=*&order=name"
+          }
         },
         {
           "name": "Try to add a show (blocked by RLS)",
@@ -102,14 +134,24 @@
               "listen": "test",
               "script": {
                 "type": "text/javascript",
-                "exec": ["pm.test('catalog is read-only', () => pm.expect(pm.response.code).to.be.oneOf([401, 403]));"]
+                "exec": [
+                  "pm.test('catalog is read-only', () => pm.expect(pm.response.code).to.be.oneOf([401, 403]));"
+                ]
               }
             }
           ],
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{ \"id\": \"not-allowed\", \"title\": \"Not allowed\", \"release_year\": 2026, \"maturity_rating\": \"TV-14\", \"genre_id\": 1 }" },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"id\": \"not-allowed\", \"title\": \"Not allowed\", \"release_year\": 2026, \"maturity_rating\": \"TV-14\", \"genre_id\": 1 }"
+            },
             "url": "{{baseUrl}}/rest/v1/shows",
             "description": "Expected to fail: the catalog can only be changed through migrations."
           }
@@ -121,17 +163,29 @@
       "item": [
         {
           "name": "Get my profile",
-          "request": { "method": "GET", "url": "{{baseUrl}}/rest/v1/profiles?select=*" }
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/rest/v1/profiles?select=*"
+          }
         },
         {
           "name": "Update display name",
           "request": {
             "method": "PATCH",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Prefer", "value": "return=representation" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Prefer",
+                "value": "return=representation"
+              }
             ],
-            "body": { "mode": "raw", "raw": "{ \"display_name\": \"Jay\", \"avatar_color\": \"#46d369\" }" },
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"display_name\": \"Jay\", \"avatar_color\": \"#46d369\" }"
+            },
             "url": "{{baseUrl}}/rest/v1/profiles?id=eq.{{userId}}"
           }
         }
@@ -152,10 +206,19 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Prefer", "value": "return=representation" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Prefer",
+                "value": "return=representation"
+              }
             ],
-            "body": { "mode": "raw", "raw": "{ \"show_id\": \"arcane\", \"status\": \"want\" }" },
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"show_id\": \"arcane\", \"status\": \"want\" }"
+            },
             "url": "{{baseUrl}}/rest/v1/list_entries",
             "description": "user_id defaults to the signed-in user. show_id must exist in shows."
           }
@@ -165,10 +228,19 @@
           "request": {
             "method": "PATCH",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Prefer", "value": "return=representation" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Prefer",
+                "value": "return=representation"
+              }
             ],
-            "body": { "mode": "raw", "raw": "{ \"rating\": 5, \"status\": \"finished\" }" },
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"rating\": 5, \"status\": \"finished\" }"
+            },
             "url": "{{baseUrl}}/rest/v1/list_entries?show_id=eq.arcane"
           }
         },
@@ -176,7 +248,12 @@
           "name": "Remove a show (also deletes its comments)",
           "request": {
             "method": "DELETE",
-            "header": [{ "key": "Prefer", "value": "return=representation" }],
+            "header": [
+              {
+                "key": "Prefer",
+                "value": "return=representation"
+              }
+            ],
             "url": "{{baseUrl}}/rest/v1/list_entries?show_id=eq.arcane"
           }
         }
@@ -187,7 +264,10 @@
       "item": [
         {
           "name": "Get my comments",
-          "request": { "method": "GET", "url": "{{baseUrl}}/rest/v1/list_comments?select=*&order=created_at.desc" }
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/rest/v1/list_comments?select=*&order=created_at.desc"
+          }
         },
         {
           "name": "Add a comment",
@@ -206,10 +286,19 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Prefer", "value": "return=representation" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Prefer",
+                "value": "return=representation"
+              }
             ],
-            "body": { "mode": "raw", "raw": "{ \"id\": \"{{$guid}}\", \"show_id\": \"arcane\", \"body\": \"The animation is unreal.\", \"spoiler\": false }" },
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"id\": \"{{$guid}}\", \"show_id\": \"arcane\", \"body\": \"The animation is unreal.\", \"spoiler\": false }"
+            },
             "url": "{{baseUrl}}/rest/v1/list_comments",
             "description": "The show must be on your list first (run My List → Add a show)."
           }
@@ -219,6 +308,155 @@
           "request": {
             "method": "DELETE",
             "url": "{{baseUrl}}/rest/v1/list_comments?id=eq.{{commentId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Your titles & lists",
+      "item": [
+        {
+          "name": "Get my own titles",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/rest/v1/shows?select=*,genres(name)&created_by=not.is.null&order=created_at.desc"
+          }
+        },
+        {
+          "name": "Add my own movie",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Prefer",
+                "value": "return=representation"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"id\": \"u-{{$guid}}\", \"title\": \"Interstellar\", \"kind\": \"movie\", \"release_year\": 2014, \"maturity_rating\": \"PG-13\", \"genre_id\": 1 }"
+            },
+            "url": "{{baseUrl}}/rest/v1/shows",
+            "description": "Ids for your own titles start with u-. genre_id must be a row in genres (run Catalog → List genres)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('created', () => pm.response.to.have.status(201));",
+                  "pm.environment.set('customShowId', pm.response.json()[0].id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete my movie",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/rest/v1/shows?id=eq.{{customShowId}}"
+          }
+        },
+        {
+          "name": "Get my lists with their titles",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/rest/v1/lists?select=id,name,created_at,list_items(show_id,added_at,shows(title))&order=created_at"
+          }
+        },
+        {
+          "name": "Create a list",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Prefer",
+                "value": "return=representation"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"id\": \"{{$guid}}\", \"name\": \"Comfort shows\" }"
+            },
+            "url": "{{baseUrl}}/rest/v1/lists"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('created', () => pm.response.to.have.status(201));",
+                  "pm.environment.set('listId', pm.response.json()[0].id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Rename the list",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Prefer",
+                "value": "return=representation"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"name\": \"Cozy nights\" }"
+            },
+            "url": "{{baseUrl}}/rest/v1/lists?id=eq.{{listId}}"
+          }
+        },
+        {
+          "name": "Add a title to the list",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Prefer",
+                "value": "return=representation"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"list_id\": \"{{listId}}\", \"show_id\": \"brooklyn-nine-nine\" }"
+            },
+            "url": "{{baseUrl}}/rest/v1/list_items"
+          }
+        },
+        {
+          "name": "Remove that title from the list",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/rest/v1/list_items?list_id=eq.{{listId}}&show_id=eq.brooklyn-nine-nine"
+          }
+        },
+        {
+          "name": "Delete the list (also deletes its items)",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/rest/v1/lists?id=eq.{{listId}}"
           }
         }
       ]

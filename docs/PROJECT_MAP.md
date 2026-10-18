@@ -1,6 +1,6 @@
 # Project map
 
-**Last updated:** 2026-10-16 · **Tests:** 24 passing (4 files) · **Build:** ✅
+**Last updated:** 2026-10-18 · **Tests:** 49 passing (8 files) · **Build:** ✅
 _Maintained by the `project-mapper` agent. Regenerate after any structural change._
 
 ## Directory tree
@@ -19,7 +19,8 @@ netflix/
 │   └── myflix.postman_collection.json  Supabase API requests (environments/ is gitignored)
 ├── supabase/migrations/
 │   ├── 20261016000000_my_list.sql  list_entries + list_comments tables, RLS policies
-│   └── 20261016190000_profiles_catalog.sql  profiles (auto on sign-up), genres + shows catalog, FKs
+│   ├── 20261016190000_profiles_catalog.sql  profiles (auto on sign-up), genres + shows catalog, FKs
+│   └── 20261018000000_custom_shows_and_lists.sql  user-added shows (created_by), lists, list_items
 ├── .claude/
 │   ├── settings.json             allowed commands + enabled MCP servers
 │   ├── agents/                   6 subagents (see Tooling)
@@ -32,13 +33,20 @@ netflix/
 └── src/
     ├── main.jsx                  createRoot + StrictMode + global.css
     ├── App.jsx                   <Header/> + <main><MyList/></main>
-    ├── data/shows.js             SHOWS catalog, SHOWS_BY_ID, STARTER_LIST
-    ├── utils/listUtils.js        STATUSES, FILTERS, SORTS, COMMENT_MAX, filter/sort/average/timeAgo
-    ├── hooks/useMyList.js        listReducer, createInitialState, useMyList (localStorage + Supabase sync, syncStatus)
+    ├── data/shows.js             SHOWS catalog, SHOWS_BY_ID, STARTER_LIST, GENRES
+    ├── utils/
+    │   ├── listUtils.js          STATUSES, FILTERS, SORTS, COMMENT_MAX, filter/sort/average/timeAgo, combineSyncStatus
+    │   └── libraryUtils.js       show form (EMPTY_SHOW_FORM, showFormError, formToShow), buildCatalog, posterColors, sortedLists, isListNameTaken
+    ├── hooks/
+    │   ├── useMyList.js          listReducer, createInitialState, useMyList (localStorage + Supabase sync, syncStatus)
+    │   ├── useLibrary.js         libraryReducer, useLibrary (your titles + named lists; same sync model)
+    │   └── useDialog.js          focus, Escape, scroll lock for dialogs
     ├── lib/
     │   ├── supabase.js           createClient from VITE_ env vars, or null (unset / tests)
-    │   └── listSync.js           entryToRow, commentToRow, rowsToState, diffStates, createRemote
-    ├── views/MyList.jsx          My List page: stats, toolbar, grid, suggestions, modal
+    │   ├── session.js            getUserId (one anonymous sign-in per client), enqueue (shared write queue)
+    │   ├── listSync.js           entryToRow, commentToRow, rowsToState, diffStates, createRemote, check
+    │   └── librarySync.js        showToRow, listToRow, itemToRow, rowsToLibrary, diffLibrary, createLibraryRemote
+    ├── views/MyList.jsx          My List page: stats, toolbar, grid, suggestions + add-title button, Your lists, dialogs
     ├── components/
     │   ├── Header.jsx            logo + nav (My List current) + avatar
     │   ├── SyncStatus.jsx        "Synced to cloud" / "Saved on this device" indicator
@@ -47,14 +55,22 @@ netflix/
     │   ├── ShowCard.jsx          grid card button → opens modal
     │   ├── ListToolbar.jsx       filter chips with counts + sort select
     │   ├── ShowModal.jsx         detail dialog: rating, status, comments, remove
-    │   └── CommentSection.jsx    comment form + list (edit/delete/spoiler reveal)
+    │   ├── CommentSection.jsx    comment form + list (edit/delete/spoiler reveal)
+    │   ├── AddShowModal.jsx      "Add a movie or show" form dialog
+    │   ├── ListsSection.jsx      Your lists: create, rename, delete, add/remove titles
+    │   ├── ListPicker.jsx        list toggles + "new list with this title" inside ShowModal
+    │   └── ListNameForm.jsx      list name input (blocks empty/duplicate names)
     ├── styles/global.css         design tokens + all styles
     └── test/
         ├── setup.js              jest-dom matchers, cleanup, localStorage.clear
         ├── listUtils.test.js     4 tests
         ├── useMyList.test.js     5 tests
         ├── listSync.test.js      8 tests (fake Supabase client)
-        └── MyList.test.jsx       7 tests
+        ├── MyList.test.jsx       7 tests
+        ├── libraryUtils.test.js  5 tests
+        ├── useLibrary.test.js    5 tests
+        ├── librarySync.test.js   7 tests (fake Supabase client)
+        └── Library.test.jsx      8 tests (add titles, lists)
 ```
 
 ## Module table
@@ -119,7 +135,10 @@ Reducer actions: `load` (replace with cloud state), `add`, `remove`, `rate` (sam
 | Stats (titles, avg, comments) | MyList, `averageRating` | utils "averages only rated shows", integration rating test |
 | Add / remove shows | MyList suggestions row, ShowModal | reducer "adds and removes…", integration "adds and removes shows" |
 | Persistence (browser) | useMyList effect | integration "persists ratings and comments…" |
-| Cloud sync (Supabase) | lib/supabase, lib/listSync, useMyList, SyncStatus, migration | listSync.test.js (8 tests) |
+| Cloud sync (Supabase) | lib/supabase, lib/session, lib/listSync, lib/librarySync, useMyList, useLibrary, SyncStatus, migrations | listSync.test.js, librarySync.test.js |
+| Add your own title | AddShowModal, libraryUtils (form), `addShow` action, buildCatalog | Library "adds a movie…", "can add a title without…", "needs a title…" |
+| Delete your own title | ShowModal, `deleteShow` + `remove` | Library "deleting your title…", reducer test |
+| Named lists | ListsSection, ListNameForm, ListPicker, list actions | Library "Your lists" tests, useLibrary reducer tests |
 
 ## Tooling
 
@@ -144,3 +163,5 @@ Reducer actions: `load` (replace with cloud state), `add`, `remove`, `rate` (sam
 - `public/` is empty (no favicon).
 - Anonymous users lose their cloud list if they clear site data; add email login to keep it across devices.
 - Changes made before the first cloud load finishes are replaced by the cloud copy when one exists.
+- If the cloud is empty and this browser already has your own titles on My List, the first upload can race the title upload and show "Cloud sync failed" once; the next change resends it.
+- Users can only pick genres that already exist in the `genres` table.

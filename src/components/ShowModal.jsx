@@ -1,25 +1,14 @@
-import { useEffect, useRef } from 'react'
+import { useDialog } from '../hooks/useDialog.js'
 import Poster from './Poster.jsx'
 import StarRating from './StarRating.jsx'
 import CommentSection from './CommentSection.jsx'
+import ListPicker from './ListPicker.jsx'
 import { STATUSES } from '../utils/listUtils.js'
 
-export default function ShowModal({ entry, actions, onClose }) {
+// listActions: { toggle(showId, listId), create(showId, name), deleteShow(showId) } from the library.
+export default function ShowModal({ entry, lists, actions, listActions, onClose }) {
   const { show, rating, status, comments } = entry
-  const closeRef = useRef(null)
-
-  useEffect(() => {
-    const previouslyFocused = document.activeElement
-    closeRef.current?.focus()
-    const onKey = (e) => e.key === 'Escape' && onClose()
-    document.addEventListener('keydown', onKey)
-    document.body.style.overflow = 'hidden'
-    return () => {
-      document.removeEventListener('keydown', onKey)
-      document.body.style.overflow = ''
-      previouslyFocused?.focus?.()
-    }
-  }, [onClose])
+  const closeRef = useDialog(onClose)
 
   return (
     <div className="backdrop" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
@@ -33,12 +22,17 @@ export default function ShowModal({ entry, actions, onClose }) {
           <p className="modal__facts">
             <span>{show.year}</span>
             <span className="maturity">{show.maturity}</span>
-            <span>
-              {show.seasons} season{show.seasons > 1 ? 's' : ''}
-            </span>
+            {show.seasons ? (
+              <span>
+                {show.seasons} season{show.seasons > 1 ? 's' : ''}
+              </span>
+            ) : (
+              <span>Movie</span>
+            )}
             <span>{show.genre}</span>
+            {show.custom && <span className="pill">Added by you</span>}
           </p>
-          <p className="modal__synopsis">{show.synopsis}</p>
+          {show.synopsis && <p className="modal__synopsis">{show.synopsis}</p>}
 
           <div className="modal__controls">
             <div>
@@ -62,6 +56,13 @@ export default function ShowModal({ entry, actions, onClose }) {
             </div>
           </div>
 
+          <ListPicker
+            show={show}
+            lists={lists}
+            onToggle={(listId) => listActions.toggle(show.id, listId)}
+            onCreate={(name) => listActions.create(show.id, name)}
+          />
+
           <CommentSection
             comments={comments}
             onAdd={(text, spoiler) => actions.addComment(show.id, text, spoiler)}
@@ -69,16 +70,30 @@ export default function ShowModal({ entry, actions, onClose }) {
             onDelete={(commentId) => actions.deleteComment(show.id, commentId)}
           />
 
-          <button
-            type="button"
-            className="btn btn--danger"
-            onClick={() => {
-              actions.remove(show.id)
-              onClose()
-            }}
-          >
-            Remove from My List
-          </button>
+          <div className="modal__danger">
+            <button
+              type="button"
+              className="btn btn--danger"
+              onClick={() => {
+                actions.remove(show.id)
+                onClose()
+              }}
+            >
+              Remove from My List
+            </button>
+            {show.custom && (
+              <button
+                type="button"
+                className="btn btn--danger"
+                onClick={() => {
+                  listActions.deleteShow(show.id)
+                  onClose()
+                }}
+              >
+                Delete this title from Myflix
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>

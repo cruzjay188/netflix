@@ -12,6 +12,10 @@ erDiagram
     list_entries ||--o{ list_comments : "has"
     shows ||--o{ list_entries : "appears in"
     genres ||--o{ shows : "categorizes"
+    profiles ||--o{ shows : "adds (custom titles)"
+    profiles ||--o{ lists : "makes"
+    lists ||--o{ list_items : "holds"
+    shows ||--o{ list_items : "appears in"
 
     auth_users {
         uuid id PK "managed by Supabase Auth (anonymous sign-in)"
@@ -39,7 +43,23 @@ erDiagram
         text maturity_rating "TV-Y ... TV-MA, G ... NC-17"
         text synopsis
         smallint genre_id FK
+        uuid created_by FK "profiles.id; null = built-in catalog"
         timestamptz created_at
+    }
+
+    lists {
+        uuid id PK "generated in the browser"
+        uuid user_id FK "profiles.id"
+        text name "1-50 chars, unique per user (any case)"
+        timestamptz created_at
+        timestamptz updated_at "set by trigger"
+    }
+
+    list_items {
+        uuid list_id PK, FK "with user_id -> lists"
+        text show_id PK, FK "shows.id"
+        uuid user_id "owner, checked by RLS"
+        timestamptz added_at
     }
 
     list_entries {
@@ -68,9 +88,11 @@ erDiagram
 |---|---|---|
 | `profiles` | user account; created automatically on sign-up by the `on_auth_user_created` trigger | Owner reads and updates their own row |
 | `genres` | genre | Everyone reads; no writes from the browser |
-| `shows` | title in the catalog (mirrors `src/data/shows.js`) | Everyone reads; no writes from the browser |
+| `shows` | title: the built-in catalog (mirrors `src/data/shows.js`, `created_by` null) plus titles users add themselves | Everyone reads the catalog; a user's own titles are visible to and editable by only them |
 | `list_entries` | show a user saved to My List | Owner only (`auth.uid() = user_id`) |
 | `list_comments` | comment a user left on a saved show | Owner only (`auth.uid() = user_id`) |
+| `lists` | named list a user made ("Comfort shows") | Owner only (`auth.uid() = user_id`) |
+| `list_items` | title in one of those lists | Owner only (`auth.uid() = user_id`) |
 
 ## Relationships and rules
 
@@ -79,11 +101,16 @@ erDiagram
 - **list_entries → list_comments (1:N)**: comments reference `(user_id, show_id)`; removing a show from My List deletes its comments.
 - **shows → list_entries (1:N)**: a list row must point at a real catalog show. Adding a show to `src/data/shows.js` also needs an insert in a new migration.
 - **genres → shows (1:N)**: each show has one genre.
+- **profiles → shows (1:N, custom titles)**: `created_by` marks a title a user added. Deleting the title cascades to its My List row, comments and list items.
+- **profiles → lists → list_items (1:N:N)**: deleting a list deletes its items. `list_items` points at `lists (id, user_id)`, so an item can only go in its owner's list.
+- **shows → list_items (1:N)**: the same title can be in many lists.
 - `updated_at` columns are maintained by the `set_updated_at()` trigger.
 
 ## How the app maps to it
 
-`src/lib/listSync.js` converts between reducer state and rows: `entryToRow` / `commentToRow` going up, `rowsToState` coming down. The app reads and writes only `list_entries` and `list_comments`; show details on screen still come from `src/data/shows.js`.
+`src/lib/listSync.js` converts between reducer state and rows: `entryToRow` / `commentToRow` going up, `rowsToState` coming down. It reads and writes `list_entries` and `list_comments`.
+
+`src/lib/librarySync.js` does the same for the library: `showToRow` / `listToRow` / `itemToRow` going up, `rowsToLibrary` coming down. It reads and writes the user's own `shows` rows, `lists` and `list_items`, and reads `genres` to turn genre names into ids. Built-in show details on screen still come from `src/data/shows.js`.
 
 ## Migrations
 
@@ -91,5 +118,6 @@ erDiagram
 |---|---|
 | `20261016000000_my_list.sql` | `list_entries`, `list_comments`, RLS policies |
 | `20261016190000_profiles_catalog.sql` | `profiles` (+ sign-up trigger), `genres`, `shows` (+ seed), foreign keys, `updated_at` triggers |
+| `20261018000000_custom_shows_and_lists.sql` | `shows.created_by` + RLS for user-added titles, `lists`, `list_items`, cascade from shows to `list_entries` |
 
 To set up a fresh Supabase project, run them in order in the SQL Editor, or with the Supabase CLI: `supabase db push`.

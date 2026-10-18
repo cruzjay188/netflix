@@ -1,33 +1,60 @@
 import { useCallback, useMemo, useState } from 'react'
-import { SHOWS, SHOWS_BY_ID } from '../data/shows.js'
+import { useLibrary } from '../hooks/useLibrary.js'
 import { useMyList } from '../hooks/useMyList.js'
-import { FILTERS, averageRating, filterEntries, sortEntries } from '../utils/listUtils.js'
+import { FILTERS, averageRating, combineSyncStatus, filterEntries, sortEntries } from '../utils/listUtils.js'
+import { buildCatalog, sortedLists } from '../utils/libraryUtils.js'
+import AddShowModal from '../components/AddShowModal.jsx'
 import ListToolbar from '../components/ListToolbar.jsx'
+import ListsSection from '../components/ListsSection.jsx'
 import ShowCard from '../components/ShowCard.jsx'
 import ShowModal from '../components/ShowModal.jsx'
 import Poster from '../components/Poster.jsx'
 import SyncStatus from '../components/SyncStatus.jsx'
 
 export default function MyList() {
-  const { list, syncStatus, ...actions } = useMyList()
+  // useLibrary comes first on purpose: its effects run first, so a newly added title is queued
+  // for Supabase before the My List entry that points at it.
+  const { library, syncStatus: librarySync, ...libraryActions } = useLibrary()
+  const { list, syncStatus: listSync, ...actions } = useMyList()
   const [filter, setFilter] = useState('all')
   const [sort, setSort] = useState('recent')
   const [openId, setOpenId] = useState(null)
+  const [addingShow, setAddingShow] = useState(false)
   const closeModal = useCallback(() => setOpenId(null), [])
+  const closeAddShow = useCallback(() => setAddingShow(false), [])
 
+  const catalog = useMemo(() => buildCatalog(library.customShows), [library.customShows])
+  const lists = useMemo(() => sortedLists(library.lists), [library.lists])
   const entries = useMemo(
     () =>
       Object.entries(list)
-        .filter(([id]) => SHOWS_BY_ID[id]) // ignore saved ids for shows no longer in the catalog
-        .map(([id, entry]) => ({ ...entry, show: SHOWS_BY_ID[id] })),
-    [list],
+        .filter(([id]) => catalog[id]) // ignore saved ids for shows no longer in the catalog
+        .map(([id, entry]) => ({ ...entry, show: catalog[id] })),
+    [list, catalog],
   )
   const visible = sortEntries(filterEntries(entries, filter), sort)
   const counts = Object.fromEntries(Object.keys(FILTERS).map((key) => [key, filterEntries(entries, key).length]))
   const avg = averageRating(entries)
   const commentTotal = entries.reduce((sum, e) => sum + e.comments.length, 0)
-  const suggestions = SHOWS.filter((s) => !list[s.id])
+  const suggestions = Object.values(catalog).filter((s) => !list[s.id])
   const openEntry = openId && entries.find((e) => e.show.id === openId)
+
+  const listActions = {
+    toggle: (showId, listId) =>
+      showId in library.lists[listId].items
+        ? libraryActions.removeFromList(listId, showId)
+        : libraryActions.addToList(listId, showId),
+    create: (showId, name) => libraryActions.addToList(libraryActions.createList(name), showId),
+    deleteShow: (showId) => {
+      libraryActions.deleteShow(showId)
+      actions.remove(showId)
+    },
+  }
+
+  function addShow(fields, alsoAddToMyList) {
+    const id = libraryActions.addShow(fields)
+    if (alsoAddToMyList) actions.add(id)
+  }
 
   return (
     <>
@@ -35,7 +62,7 @@ export default function MyList() {
         <div className="list-head">
           <div className="list-head__title">
             <h1 id="mylist-heading">My List</h1>
-            <SyncStatus status={syncStatus} />
+            <SyncStatus status={combineSyncStatus(listSync, librarySync)} />
           </div>
           <p className="stats" aria-label="List stats">
             <span>
@@ -67,9 +94,16 @@ export default function MyList() {
         )}
       </section>
 
-      {suggestions.length > 0 && (
-        <section className="suggestions" aria-labelledby="suggestions-heading">
+      <section className="suggestions" aria-labelledby="suggestions-heading">
+        <div className="section-head">
           <h2 id="suggestions-heading">Add to My List</h2>
+          <button type="button" className="btn btn--outline" onClick={() => setAddingShow(true)}>
+            + Add your own title
+          </button>
+        </div>
+        {suggestions.length === 0 ? (
+          <p className="muted">Everything in the catalog is already on your list.</p>
+        ) : (
           <ul className="row">
             {suggestions.map((show) => (
               <li key={show.id} className="suggestion">
@@ -85,10 +119,15 @@ export default function MyList() {
               </li>
             ))}
           </ul>
-        </section>
-      )}
+        )}
+      </section>
 
-      {openEntry && <ShowModal entry={openEntry} actions={actions} onClose={closeModal} />}
+      <ListsSection lists={lists} catalog={catalog} actions={libraryActions} />
+
+      {openEntry && (
+        <ShowModal entry={openEntry} lists={lists} actions={actions} listActions={listActions} onClose={closeModal} />
+      )}
+      {addingShow && <AddShowModal onAdd={addShow} onClose={closeAddShow} />}
     </>
   )
 }

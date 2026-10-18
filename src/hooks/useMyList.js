@@ -2,6 +2,7 @@ import { useEffect, useReducer, useRef, useState } from 'react'
 import { STARTER_LIST } from '../data/shows.js'
 import { supabase } from '../lib/supabase.js'
 import { createRemote, diffStates, isEmptyDiff } from '../lib/listSync.js'
+import { enqueue } from '../lib/session.js'
 
 export const STORAGE_KEY = 'myflix:my-list'
 
@@ -81,7 +82,6 @@ export function useMyList({ remote = defaultRemote } = {}) {
   const [syncStatus, setSyncStatus] = useState(remote ? 'connecting' : 'local')
   const sent = useRef(null) // last state handed to Supabase; null until the first load finishes
   const confirmed = useRef(null) // last state Supabase acknowledged
-  const queue = useRef(Promise.resolve())
 
   // localStorage is always written, so the list also works offline.
   useEffect(() => {
@@ -117,18 +117,16 @@ export function useMyList({ remote = defaultRemote } = {}) {
     const ops = diffStates(sent.current, list)
     if (isEmptyDiff(ops)) return
     sent.current = list
-    queue.current = queue.current
-      .then(() => remote.apply(ops))
-      .then(
-        () => {
-          confirmed.current = list
-          setSyncStatus('synced')
-        },
-        () => {
-          sent.current = confirmed.current // resend what's missing on the next change
-          setSyncStatus('error')
-        },
-      )
+    enqueue(() => remote.apply(ops)).then(
+      () => {
+        confirmed.current = list
+        setSyncStatus('synced')
+      },
+      () => {
+        sent.current = confirmed.current // resend what's missing on the next change
+        setSyncStatus('error')
+      },
+    )
   }, [list, remote, syncStatus])
 
   const now = () => Date.now()

@@ -53,3 +53,10 @@ export function timeAgo(timestamp, now = Date.now()) {
   if (days < 30) return `${days}d ago`
   return new Date(timestamp).toLocaleDateString()
 }
+
+// One indicator for the page: the most worrying of several sync statuses wins.
+const SYNC_SEVERITY = ['local', 'synced', 'connecting', 'error']
+
+export function combineSyncStatus(...statuses) {
+  return SYNC_SEVERITY[Math.max(...statuses.map((s) => SYNC_SEVERITY.indexOf(s)))]
+}
