@@ -1,0 +1,227 @@
+{
+  "info": {
+    "name": "Myflix API (Supabase)",
+    "description": "Calls the Myflix Supabase project the same way the app does.\n\n1. Select the **Myflix (Supabase)** environment.\n2. Run **Auth → Sign in anonymously** first. It saves `accessToken`, `refreshToken` and `userId` to the environment.\n3. Every other request then runs as that user, so row-level security applies: you only see and change that user's list.\n\nEach anonymous sign-in is a new user with an empty list. To act as the user from your browser instead, paste the browser's token into `accessToken` (DevTools → Application → Local Storage → `sb-xwewyxugdsabrqencnyv-auth-token` → `access_token`).\n\nSchema: docs/SCHEMA.md",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }]
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Supabase needs the project's publishable key on every request.",
+          "pm.request.headers.upsert({ key: 'apikey', value: pm.environment.get('apiKey') });"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Sign in anonymously",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('signed in', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.environment.set('accessToken', body.access_token);",
+                  "pm.environment.set('refreshToken', body.refresh_token);",
+                  "pm.environment.set('userId', body.user.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{}" },
+            "url": "{{baseUrl}}/auth/v1/signup",
+            "description": "Creates a new anonymous user (anonymous sign-ins must be enabled in Supabase). Saves the tokens to the environment."
+          }
+        },
+        {
+          "name": "Refresh token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('refreshed', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.environment.set('accessToken', body.access_token);",
+                  "pm.environment.set('refreshToken', body.refresh_token);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{ \"refresh_token\": \"{{refreshToken}}\" }" },
+            "url": "{{baseUrl}}/auth/v1/token?grant_type=refresh_token",
+            "description": "Access tokens expire after an hour. Run this to get a new one without creating a new user."
+          }
+        },
+        {
+          "name": "Get current user",
+          "request": { "method": "GET", "url": "{{baseUrl}}/auth/v1/user" }
+        }
+      ]
+    },
+    {
+      "name": "Catalog (public)",
+      "item": [
+        {
+          "name": "List shows with genre",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/rest/v1/shows?select=id,title,kind,release_year,seasons,maturity_rating,genres(name)&order=title"
+          }
+        },
+        {
+          "name": "List genres",
+          "request": { "method": "GET", "url": "{{baseUrl}}/rest/v1/genres?select=*&order=name" }
+        },
+        {
+          "name": "Try to add a show (blocked by RLS)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('catalog is read-only', () => pm.expect(pm.response.code).to.be.oneOf([401, 403]));"]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{ \"id\": \"not-allowed\", \"title\": \"Not allowed\", \"release_year\": 2026, \"maturity_rating\": \"TV-14\", \"genre_id\": 1 }" },
+            "url": "{{baseUrl}}/rest/v1/shows",
+            "description": "Expected to fail: the catalog can only be changed through migrations."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Profile",
+      "item": [
+        {
+          "name": "Get my profile",
+          "request": { "method": "GET", "url": "{{baseUrl}}/rest/v1/profiles?select=*" }
+        },
+        {
+          "name": "Update display name",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Prefer", "value": "return=representation" }
+            ],
+            "body": { "mode": "raw", "raw": "{ \"display_name\": \"Jay\", \"avatar_color\": \"#46d369\" }" },
+            "url": "{{baseUrl}}/rest/v1/profiles?id=eq.{{userId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "My List",
+      "item": [
+        {
+          "name": "Get my list (with show titles and comments)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/rest/v1/list_entries?select=show_id,status,rating,added_at,updated_at,shows(title),list_comments(id,body,spoiler,created_at)&order=added_at.desc"
+          }
+        },
+        {
+          "name": "Add a show",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Prefer", "value": "return=representation" }
+            ],
+            "body": { "mode": "raw", "raw": "{ \"show_id\": \"arcane\", \"status\": \"want\" }" },
+            "url": "{{baseUrl}}/rest/v1/list_entries",
+            "description": "user_id defaults to the signed-in user. show_id must exist in shows."
+          }
+        },
+        {
+          "name": "Rate a show",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Prefer", "value": "return=representation" }
+            ],
+            "body": { "mode": "raw", "raw": "{ \"rating\": 5, \"status\": \"finished\" }" },
+            "url": "{{baseUrl}}/rest/v1/list_entries?show_id=eq.arcane"
+          }
+        },
+        {
+          "name": "Remove a show (also deletes its comments)",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Prefer", "value": "return=representation" }],
+            "url": "{{baseUrl}}/rest/v1/list_entries?show_id=eq.arcane"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Comments",
+      "item": [
+        {
+          "name": "Get my comments",
+          "request": { "method": "GET", "url": "{{baseUrl}}/rest/v1/list_comments?select=*&order=created_at.desc" }
+        },
+        {
+          "name": "Add a comment",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('created', () => pm.response.to.have.status(201));",
+                  "pm.environment.set('commentId', pm.response.json()[0].id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Prefer", "value": "return=representation" }
+            ],
+            "body": { "mode": "raw", "raw": "{ \"id\": \"{{$guid}}\", \"show_id\": \"arcane\", \"body\": \"The animation is unreal.\", \"spoiler\": false }" },
+            "url": "{{baseUrl}}/rest/v1/list_comments",
+            "description": "The show must be on your list first (run My List → Add a show)."
+          }
+        },
+        {
+          "name": "Delete that comment",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/rest/v1/list_comments?id=eq.{{commentId}}"
+          }
+        }
+      ]
+    }
+  ]
+}
