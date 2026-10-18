@@ -23,8 +23,8 @@ netflix/
 │   └── 20261018000000_custom_shows_and_lists.sql  user-added shows (created_by), lists, list_items
 ├── .claude/
 │   ├── settings.json             allowed commands + enabled MCP servers
-│   ├── agents/                   6 subagents (see Tooling)
-│   └── skills/                   add-feature, mobbin-research, run-app
+│   ├── agents/                   9 subagents (6 custom + 3 course agents, see Tooling)
+│   └── skills/                   add-feature, mobbin-research, run-app + 5 course skills
 ├── docs/
 │   ├── PROJECT_MAP.md            this file
 │   ├── SCHEMA.md                 database ERD + table reference
@@ -150,9 +150,13 @@ Reducer actions: `load` (replace with cloud state), `add`, `remove`, `rate` (sam
 | `test-writer` agent | Vitest/RTL tests |
 | `code-reviewer` agent | Read-only review |
 | `content-curator` agent | Personalizes `src/data/shows.js` |
+| `front-end-agent` / `supabase-agent` / `qa-agent` | Course agents from the instructor repos (UI, Supabase, browser QA) |
+| Design skills | `frontend-design`, `ui-ux-pro-max`, `design-taste-frontend`, `design-motion-principles` |
+| `postgresql-table-design` skill | Schema design rules for Supabase/Postgres |
+| `playwright`, `context7`, `chrome-devtools` MCPs | User-scoped: browser automation, live docs, DevTools |
 | `/add-feature`, `/mobbin-research`, `/run-app` skills | Workflows and commands |
 | `mobbin` MCP | UI reference search |
-| Supabase | Cloud storage via supabase-js (no MCP server) |
+| Supabase | Cloud storage via supabase-js; Supabase MCP (project-scoped, `.mcp.json`) for Claude |
 
 ## Gaps / TODOs
 

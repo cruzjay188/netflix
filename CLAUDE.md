@@ -69,6 +69,11 @@ Full detail: @docs/PROJECT_MAP.md
 | `test-writer` | sonnet | Write/fix Vitest + RTL tests |
 | `code-reviewer` | opus | Read-only review for bugs, a11y, conventions |
 | `content-curator` | haiku | Personalize `src/data/shows.js` around the user's interests |
+| `front-end-agent` | sonnet | **Course agent** (SPA lecture). React UI work with Context7, Playwright, Chrome DevTools and the 4 design skills |
+| `supabase-agent` | sonnet | **Course agent** (Databases lecture). Schema, RLS, migrations and API work through the Supabase MCP + `postgresql-table-design` |
+| `qa-agent` | opus | **Course agent** (KC6). Give it a URL + feature list; it tests them in a real browser with Playwright, mobile and desktop |
+
+The three course agents are copied word for word from the instructor's repos. Don't edit them; the class prompts expect them as-is. For multi-agent prompts from class, the main session orchestrates `front-end-agent` + `supabase-agent`.
 
 **Feature workflow:** ui-researcher → feature-builder → test-writer → code-reviewer → project-mapper. The `/add-feature` skill walks through it.
 
@@ -77,10 +82,13 @@ Full detail: @docs/PROJECT_MAP.md
 - `/add-feature <description>` — the end-to-end feature workflow and done-checklist
 - `/mobbin-research <topic>` — how to query Mobbin and the research brief template
 - `/run-app` — commands to run, test, build, and reset local data
+- Course design skills (SPA lecture, installed by `setup-skills.sh`): `frontend-design`, `ui-ux-pro-max`, `design-taste-frontend` (folder `taste-skill`), `design-motion-principles`
+- Course database skill (Databases lecture, `setup-db-skill.sh`): `postgresql-table-design`. Use it for every schema change.
 
 ## MCP
 
 - **Supabase**: the app uses `@supabase/supabase-js`. Claude Code also has the Supabase MCP server (`.mcp.json`, project `xwewyxugdsabrqencnyv`) for migrations, SQL and advisors — keep the files in `supabase/migrations/` in step with what you apply. Users sign in anonymously (must be enabled in the dashboard under Authentication → Sign In / Providers).
+- **playwright**, **context7**, **chrome-devtools**: user-scoped (installed for every project per the SPA lecture). Playwright = drive a real browser; Context7 = current library docs; Chrome DevTools = console, network, performance.
 - **mobbin** (`.mcp.json`, HTTP `https://api.mobbin.com/mcp`) — UI reference search. Tools: `search_screens`, `search_flows`, `search_sections`. Always use `platform: "web"` and cite results by their `mobbin_url`.
 
 ## Current status
