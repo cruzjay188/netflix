@@ -6,7 +6,7 @@ The first section is **My List**: save shows, rate them 1–5 stars, leave comme
 
 You can also **add your own movies and series** that aren't in the catalog, and make **your own lists** ("Comfort shows", "Watch with Dad"…) to group titles however you like.
 
-Everything syncs to **Supabase** (and is also saved in the browser, so it works offline).
+Everyone has their own **account** (email + password). Everything syncs to **Supabase**, where Row Level Security makes sure each account sees only its own data. It's also saved in the browser, so it works offline.
 
 ## Run it
 
@@ -21,10 +21,12 @@ npm run build   # production build
 ### Connect Supabase (optional)
 
 1. Create a project at [supabase.com](https://supabase.com).
-2. In **SQL Editor**, run each file in `supabase/migrations/` in order (oldest first), or use the Supabase CLI: `supabase db push`.
-3. In **Authentication → Sign In / Providers**, turn on **Anonymous sign-ins**.
+2. In **SQL Editor**, paste `supabase/schema.sql` and click **Run**. It creates every table, the sign-up trigger and the security rules.
+3. In **Authentication → Sign In / Providers**: keep **Email** on. For development, turn **Confirm email** off; leave **Anonymous sign-ins** off.
 4. Copy `front-end/.env.example` to `front-end/.env.local` and paste your Project URL and anon (publishable) key.
-5. Restart `npm run dev`. The page should say **Synced to cloud** under the title.
+5. Restart `npm run dev`. You'll see **Log in**: choose **Create an account**, and My List should say **Synced to cloud** under the title.
+
+Without `.env.local` the app skips accounts and keeps everything on this device.
 
 ## How it's organized
 
@@ -35,14 +37,15 @@ front-end/      the React app (run npm commands here)
     data/         show catalog (shows.js)
     utils/        pure helpers (filter, sort, average, timeAgo, show form, list names)
     hooks/        useMyList (My List) + useLibrary (your titles and lists): state, localStorage, Supabase sync
-    lib/          Supabase client, shared sign-in + write queue, row ⇄ state sync
-    views/        pages (MyList)
+    lib/          Supabase client, accounts (auth.js), write queue, row ⇄ state sync
+    views/        pages (MyList, AuthPage = Log in / Register)
     components/   reusable UI (cards, modal, stars, comments, …)
     styles/       global.css
     test/         Vitest + React Testing Library tests
   index.html, package.json, vite.config.js, .env.example
 supabase/       the database
-  migrations/   database tables, policies and seed data (run in order)
+  schema.sql    the whole current database in one file
+  migrations/   the same changes, step by step
   backups/      a copy of the test rows from before authentication
 docs/
   SCHEMA.md     database diagram (ERD) and table reference

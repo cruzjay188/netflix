@@ -1,7 +1,7 @@
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { act, renderHook, waitFor } from '@testing-library/react'
 import { createLibraryRemote, diffLibrary, rowsToLibrary } from '../lib/librarySync.js'
-import { createRemote, isEmptyDiff } from '../lib/listSync.js'
+import { isEmptyDiff } from '../lib/listSync.js'
 import { EMPTY_LIBRARY, LIBRARY_KEY, libraryReducer, useLibrary } from '../hooks/useLibrary.js'
 
 // Minimal stand-in for the supabase-js client: records writes, returns canned rows.
@@ -11,10 +11,6 @@ function fakeClient(rows = {}) {
   const data = { genres: [{ id: 1, name: 'Sci-Fi' }], shows: [], lists: [], list_items: [], list_entries: [], list_comments: [], ...rows }
   return {
     calls,
-    auth: {
-      getSession: async () => ({ data: { session: null } }),
-      signInAnonymously: vi.fn(async () => ({ data: { user: { id: 'user-1' } }, error: null })),
-    },
     from(table) {
       return {
         select: () => Object.assign(ok(data[table]), { not: () => ok(data[table]) }),
@@ -102,14 +98,11 @@ describe('createLibraryRemote', () => {
     await remote.apply(diffLibrary(EMPTY_LIBRARY, next))
 
     expect(client.calls.map((c) => `${c.table}:${c.op}`)).toEqual(['shows:upsert', 'lists:upsert', 'list_items:upsert'])
-    expect(client.calls[0].rows[0]).toMatchObject({ id: 'u-1', created_by: 'user-1', genre_id: 1, release_year: 2014 })
-    expect(client.calls[2].rows[0]).toMatchObject({ list_id: 'l1', show_id: 'u-1', user_id: 'user-1' })
-  })
-
-  it('shares one anonymous sign-in with the My List remote', async () => {
-    const client = fakeClient()
-    await Promise.all([createRemote(client).load(), createLibraryRemote(client).load()])
-    expect(client.auth.signInAnonymously).toHaveBeenCalledTimes(1)
+    expect(client.calls[0].rows[0]).toMatchObject({ id: 'u-1', genre_id: 1, release_year: 2014 })
+    expect(client.calls[2].rows[0]).toMatchObject({ list_id: 'l1', show_id: 'u-1' })
+    // The database fills in the owner from the login (default auth.uid()).
+    expect(client.calls[0].rows[0]).not.toHaveProperty('created_by')
+    for (const call of client.calls.slice(1)) expect(call.rows[0]).not.toHaveProperty('user_id')
   })
 })
 
@@ -135,6 +128,7 @@ describe('useLibrary with Supabase', () => {
     })
     await waitFor(() => expect(client.calls).toHaveLength(1))
     expect(client.calls[0]).toMatchObject({ table: 'lists', op: 'upsert' })
-    expect(client.calls[0].rows[0]).toMatchObject({ name: 'Faves', user_id: 'user-1' })
+    expect(client.calls[0].rows[0]).toMatchObject({ name: 'Faves' })
+    expect(client.calls[0].rows[0]).not.toHaveProperty('user_id')
   })
 })

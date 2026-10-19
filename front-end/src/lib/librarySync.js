@@ -1,18 +1,17 @@
 // Keeps the library (the user's own shows + named lists) in sync with Supabase, the same way
 // listSync.js does for My List: diff each reducer state against the last synced one and send
-// only the rows that changed.
+// only the rows that changed. Rows never carry user_id or created_by: the database fills them
+// in from the login (default auth.uid()).
 
 import { check, isEmptyDiff } from './listSync.js'
-import { getUserId } from './session.js'
 
 const iso = (ms) => new Date(ms).toISOString()
 
-export function showToRow(userId, show, genreIds) {
+export function showToRow(show, genreIds) {
   const genreId = genreIds[show.genre]
   if (!genreId) throw new Error(`Unknown genre: ${show.genre}`)
   return {
     id: show.id,
-    created_by: userId,
     title: show.title,
     kind: show.kind,
     release_year: show.year,
@@ -24,12 +23,12 @@ export function showToRow(userId, show, genreIds) {
   }
 }
 
-export function listToRow(userId, listId, list) {
-  return { id: listId, user_id: userId, name: list.name, created_at: iso(list.createdAt) }
+export function listToRow(listId, list) {
+  return { id: listId, name: list.name, created_at: iso(list.createdAt) }
 }
 
-export function itemToRow(userId, listId, showId, addedAt) {
-  return { list_id: listId, show_id: showId, user_id: userId, added_at: iso(addedAt) }
+export function itemToRow(listId, showId, addedAt) {
+  return { list_id: listId, show_id: showId, added_at: iso(addedAt) }
 }
 
 export function rowsToLibrary(showRows, listRows, itemRows) {
@@ -84,7 +83,6 @@ export function createLibraryRemote(client) {
 
   return {
     async load() {
-      await getUserId(client)
       const [genres, shows, lists, items] = await Promise.all([
         client.from('genres').select('id, name'),
         // RLS only returns this user's custom shows; the built-in catalog has created_by = null.
@@ -99,20 +97,19 @@ export function createLibraryRemote(client) {
 
     async apply(ops) {
       if (isEmptyDiff(ops)) return
-      const userId = await getUserId(client)
       // Order matters: items reference lists and shows.
       if (ops.upsertShows.length) {
-        await check(client.from('shows').upsert(ops.upsertShows.map((show) => showToRow(userId, show, genreIds))))
+        await check(client.from('shows').upsert(ops.upsertShows.map((show) => showToRow(show, genreIds))))
       }
       if (ops.upsertLists.length) {
-        await check(client.from('lists').upsert(ops.upsertLists.map(({ listId, list }) => listToRow(userId, listId, list))))
+        await check(client.from('lists').upsert(ops.upsertLists.map(({ listId, list }) => listToRow(listId, list))))
       }
       if (ops.upsertItems.length) {
         await check(
           client
             .from('list_items')
             .upsert(
-              ops.upsertItems.map(({ listId, showId, addedAt }) => itemToRow(userId, listId, showId, addedAt)),
+              ops.upsertItems.map(({ listId, showId, addedAt }) => itemToRow(listId, showId, addedAt)),
               { onConflict: 'list_id,show_id' },
             ),
         )

@@ -1,19 +1,15 @@
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { act, renderHook, waitFor } from '@testing-library/react'
 import { createRemote, diffStates, isEmptyDiff, rowsToState } from '../lib/listSync.js'
-import { listReducer, useMyList } from '../hooks/useMyList.js'
+import { STORAGE_KEY, listReducer, useMyList } from '../hooks/useMyList.js'
 import { STARTER_LIST } from '../data/shows.js'
 
 // Minimal stand-in for the supabase-js client: records writes, returns canned rows.
-function fakeClient({ entries = [], comments = [], session = null, failLoad = false } = {}) {
+function fakeClient({ entries = [], comments = [], failLoad = false } = {}) {
   const calls = []
   const ok = (data = null) => Promise.resolve({ data, error: null })
   return {
     calls,
-    auth: {
-      getSession: async () => ({ data: { session } }),
-      signInAnonymously: vi.fn(async () => ({ data: { user: { id: 'user-1' } }, error: null })),
-    },
     from(table) {
       return {
         select: () =>
@@ -73,22 +69,18 @@ describe('diffStates', () => {
 })
 
 describe('createRemote', () => {
-  it('signs in anonymously once and writes entries before comments', async () => {
+  it('writes entries before comments and never sends a user id', async () => {
     const client = fakeClient()
     const remote = createRemote(client)
     const next = { arcane: { addedAt: 1, status: 'want', rating: 3, comments: [{ id: 'c1', text: 'yo', spoiler: false, createdAt: 2 }] } }
-    await Promise.all([remote.load(), remote.apply(diffStates({}, next))])
+    await remote.load()
+    await remote.apply(diffStates({}, next))
 
-    expect(client.auth.signInAnonymously).toHaveBeenCalledTimes(1)
     expect(client.calls.map((c) => `${c.table}:${c.op}`)).toEqual(['list_entries:upsert', 'list_comments:upsert'])
-    expect(client.calls[0].rows[0]).toMatchObject({ user_id: 'user-1', show_id: 'arcane', rating: 3 })
+    expect(client.calls[0].rows[0]).toMatchObject({ show_id: 'arcane', rating: 3 })
     expect(client.calls[1].rows[0]).toMatchObject({ id: 'c1', body: 'yo', show_id: 'arcane' })
-  })
-
-  it('reuses an existing session', async () => {
-    const client = fakeClient({ session: { user: { id: 'user-9' } } })
-    await createRemote(client).load()
-    expect(client.auth.signInAnonymously).not.toHaveBeenCalled()
+    // The database fills in user_id from the login (default auth.uid()).
+    for (const call of client.calls) expect(call.rows[0]).not.toHaveProperty('user_id')
   })
 })
 
@@ -113,6 +105,19 @@ describe('useMyList with Supabase', () => {
     act(() => result.current.rate('wednesday', 4))
     await waitFor(() => expect(client.calls).toHaveLength(2))
     expect(client.calls[1].rows).toEqual([expect.objectContaining({ show_id: 'wednesday', rating: 4 })])
+  })
+
+  it('starts a logged-in account empty and keeps its copy under its own key', async () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ arcane: { addedAt: 1, status: 'want', rating: 0, comments: [] } }))
+    const client = fakeClient()
+    const remote = createRemote(client)
+    const { result } = renderHook(() => useMyList({ remote, userId: 'user-1' }))
+    await waitFor(() => expect(result.current.syncStatus).toBe('synced'))
+    expect(result.current.list).toEqual({}) // not the starter list, and not the device-only list
+
+    act(() => result.current.add('wednesday'))
+    await waitFor(() => expect(client.calls).toHaveLength(1))
+    expect(Object.keys(JSON.parse(localStorage.getItem(`${STORAGE_KEY}:user-1`)))).toEqual(['wednesday'])
   })
 
   it('falls back to the local list when Supabase is unreachable', async () => {

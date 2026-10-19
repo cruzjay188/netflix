@@ -1,8 +1,7 @@
 // Keeps the My List reducer state in sync with Supabase.
 // The reducer stays the source of truth; we diff each new state against the last synced one
 // and send only the rows that changed, so every reducer action syncs without extra wiring.
-
-import { getUserId } from './session.js'
+// Rows never carry user_id: the database fills it in from the login (default auth.uid()).
 
 const iso = (ms) => new Date(ms).toISOString()
 
@@ -12,14 +11,13 @@ export async function check(promise) {
   if (error) throw error
 }
 
-export function entryToRow(userId, showId, entry) {
-  return { user_id: userId, show_id: showId, status: entry.status, rating: entry.rating, added_at: iso(entry.addedAt) }
+export function entryToRow(showId, entry) {
+  return { show_id: showId, status: entry.status, rating: entry.rating, added_at: iso(entry.addedAt) }
 }
 
-export function commentToRow(userId, showId, comment) {
+export function commentToRow(showId, comment) {
   return {
     id: comment.id,
-    user_id: userId,
     show_id: showId,
     body: comment.text,
     spoiler: comment.spoiler,
@@ -76,7 +74,7 @@ export function isEmptyDiff(ops) {
 export function createRemote(client) {
   return {
     async load() {
-      await getUserId(client)
+      // RLS only returns the logged-in user's rows.
       const [entries, comments] = await Promise.all([
         client.from('list_entries').select('*'),
         client.from('list_comments').select('*'),
@@ -88,13 +86,12 @@ export function createRemote(client) {
 
     async apply(ops) {
       if (isEmptyDiff(ops)) return
-      const userId = await getUserId(client)
       // Order matters: comments reference entries.
       if (ops.upsertEntries.length) {
         await check(
           client
             .from('list_entries')
-            .upsert(ops.upsertEntries.map(({ showId, entry }) => entryToRow(userId, showId, entry)), {
+            .upsert(ops.upsertEntries.map(({ showId, entry }) => entryToRow(showId, entry)), {
               onConflict: 'user_id,show_id',
             }),
         )
@@ -103,7 +100,7 @@ export function createRemote(client) {
         await check(
           client
             .from('list_comments')
-            .upsert(ops.upsertComments.map(({ showId, comment }) => commentToRow(userId, showId, comment))),
+            .upsert(ops.upsertComments.map(({ showId, comment }) => commentToRow(showId, comment))),
         )
       }
       if (ops.deleteComments.length) {

@@ -3,6 +3,9 @@
 **Last updated:** 2026-10-18 · **Tests:** 49 passing (8 files) · **Build:** ✅
 _Maintained by the `project-mapper` agent. Regenerate after any structural change._
 
+> [!warning] Out of date since 2026-10-19
+> The app moved into `front-end/` (so `src/…` below is now `front-end/src/…`), and authentication added `lib/auth.js`, `hooks/useAuth.js`, `utils/authUtils.js`, `views/AuthPage.jsx` and `supabase/schema.sql`; `session.js` no longer signs in anonymously. Tests: 60 passing (10 files). Run the `project-mapper` agent to regenerate this map.
+
 ## Directory tree
 
 ```

@@ -11,11 +11,12 @@ import ShowModal from '../components/ShowModal.jsx'
 import Poster from '../components/Poster.jsx'
 import SyncStatus from '../components/SyncStatus.jsx'
 
-export default function MyList() {
+// userId: the logged-in account (null in the device-only mode).
+export default function MyList({ userId = null }) {
   // useLibrary comes first on purpose: its effects run first, so a newly added title is queued
   // for Supabase before the My List entry that points at it.
-  const { library, syncStatus: librarySync, ...libraryActions } = useLibrary()
-  const { list, syncStatus: listSync, ...actions } = useMyList()
+  const { library, syncStatus: librarySync, ...libraryActions } = useLibrary({ userId })
+  const { list, syncStatus: listSync, ...actions } = useMyList({ userId })
   const [filter, setFilter] = useState('all')
   const [sort, setSort] = useState('recent')
   const [openId, setOpenId] = useState(null)

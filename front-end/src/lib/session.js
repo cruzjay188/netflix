@@ -1,23 +1,6 @@
-// Shared by every remote (My List, library) so they act as one user and write in one order.
-
-// One anonymous user per browser; supabase-js keeps the session in localStorage.
-// Cached per client so two remotes loading at once can't each create their own account.
-const userIds = new WeakMap()
-
-export function getUserId(client) {
-  if (!userIds.has(client)) {
-    const promise = (async () => {
-      const { data } = await client.auth.getSession()
-      if (data.session) return data.session.user.id
-      const { data: signIn, error } = await client.auth.signInAnonymously()
-      if (error) throw error
-      return signIn.user.id
-    })()
-    promise.catch(() => userIds.delete(client)) // allow a retry next time
-    userIds.set(client, promise)
-  }
-  return userIds.get(client)
-}
+// Shared by every remote (My List, library) so they write in one order.
+// Who the user is comes from their login (lib/auth.js): supabase-js sends the access token with
+// every request, and the database fills in user_id with auth.uid(). The app never sends one.
 
 // Every write to Supabase runs through this queue in the order the changes happened.
 // My List rows point at shows, so a custom show added a moment ago has to reach the

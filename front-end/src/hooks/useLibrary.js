@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase.js'
 import { createLibraryRemote, diffLibrary } from '../lib/librarySync.js'
 import { isEmptyDiff } from '../lib/listSync.js'
 import { enqueue } from '../lib/session.js'
+import { userStorageKey } from '../utils/authUtils.js'
 import { isListNameTaken } from '../utils/libraryUtils.js'
 
 export const LIBRARY_KEY = 'myflix:library'
@@ -63,9 +64,9 @@ export function libraryReducer(state, action) {
   }
 }
 
-function loadLibrary() {
+function loadLibrary(key) {
   try {
-    const saved = localStorage.getItem(LIBRARY_KEY)
+    const saved = localStorage.getItem(key)
     if (saved) return JSON.parse(saved)
   } catch {
     // Corrupt or blocked storage — start empty.
@@ -77,19 +78,21 @@ const defaultRemote = supabase ? createLibraryRemote(supabase) : null
 
 // Same persistence model as useMyList: localStorage always, Supabase when configured.
 // syncStatus: 'local' | 'connecting' | 'synced' | 'error'
-export function useLibrary({ remote = defaultRemote } = {}) {
-  const [library, dispatch] = useReducer(libraryReducer, undefined, loadLibrary)
+// userId: the logged-in account, so its offline copy is kept apart from anyone else's.
+export function useLibrary({ remote = defaultRemote, userId = null } = {}) {
+  const storageKey = userStorageKey(LIBRARY_KEY, userId)
+  const [library, dispatch] = useReducer(libraryReducer, storageKey, loadLibrary)
   const [syncStatus, setSyncStatus] = useState(remote ? 'connecting' : 'local')
   const sent = useRef(null) // last state handed to Supabase; null until the first load finishes
   const confirmed = useRef(null) // last state Supabase acknowledged
 
   useEffect(() => {
     try {
-      localStorage.setItem(LIBRARY_KEY, JSON.stringify(library))
+      localStorage.setItem(storageKey, JSON.stringify(library))
     } catch {
       // Storage full or unavailable — the library still works for this session.
     }
-  }, [library])
+  }, [library, storageKey])
 
   // First load: cloud data wins; if the cloud is empty, the local library gets uploaded.
   useEffect(() => {

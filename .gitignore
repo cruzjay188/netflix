@@ -20,3 +20,6 @@ postman/environments/
 
 # Python bytecode (from skill scripts)
 __pycache__/
+
+# Playwright MCP snapshots and screenshots
+.playwright-mcp/

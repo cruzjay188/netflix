@@ -31,15 +31,16 @@ front-end/       the React app (package.json, vite.config.js, index.html, .env.l
     user_journey.md  what a user can do, page by page (read by the auth prompts)
   src/
     data/        show catalog + starter list (the ONLY place show content lives)
-    utils/       pure helpers: listUtils (filter, sort, average, timeAgo) and libraryUtils (show form, catalog, list names)
-    hooks/       useMyList (My List) and useLibrary (own titles + named lists) — reducer + localStorage + Supabase sync; useDialog
-    lib/         supabase.js (client or null), session.js (shared sign-in + write queue), listSync.js / librarySync.js (rows ⇄ state, diff, remote)
-    views/       page-level components (MyList)
+    utils/       pure helpers: listUtils (filter, sort, average, timeAgo), libraryUtils (show form, catalog, list names), authUtils (form checks, error messages, per-user storage keys)
+    hooks/       useAuth (session + profile), useMyList (My List) and useLibrary (own titles + named lists) — reducer + localStorage + Supabase sync; useDialog
+    lib/         supabase.js (client or null), auth.js (register / log in / log out / profile), session.js (write queue), listSync.js / librarySync.js (rows ⇄ state, diff, remote)
+    views/       page-level components (MyList, AuthPage = Log in / Register)
     components/  reusable UI (Header, Poster, StarRating, ShowCard, ListToolbar, ShowModal, CommentSection, AddShowModal, ListsSection, ListPicker, ListNameForm)
     styles/      global.css — design tokens + all styles
     test/        setup.js + *.test.js(x)
 supabase/
-  migrations/  SQL for tables + row-level security (run in Supabase SQL Editor or `supabase db push`)
+  schema.sql   the whole current database in one file (keep it matching the live project)
+  migrations/  the same SQL, step by step (run in Supabase SQL Editor or `supabase db push`)
   backups/     the test rows from before authentication (don't re-import: they belong to deleted anonymous users)
 docs/
   PROJECT_MAP.md   current file-by-file map (maintained by project-mapper)
@@ -58,7 +59,8 @@ Full detail: @docs/PROJECT_MAP.md
 - **Catalog** on screen = `buildCatalog(library.customShows)`: the user's titles (ids start with `u-`, `custom: true`, generated poster colors) plus `SHOWS`. Use it instead of `SHOWS_BY_ID` wherever a user's title might appear.
 - **Persistence**: never call Supabase from components. The hook diffs each new reducer state against the last synced one (`diffStates` in `src/lib/listSync.js`) and sends only changed rows, so a new reducer action syncs automatically. A new *field* needs: a column in a new migration file, plus the `*ToRow`/`rowsTo*` updates in `listSync.js` or `librarySync.js` and tests.
 - **Write order**: every Supabase write goes through `enqueue()` in `src/lib/session.js`, one batch at a time in the order changes happened. In `views/MyList.jsx`, `useLibrary()` is called before `useMyList()` so a new title reaches the database before the My List row that points at it. Keep that order.
-- **Database**: every table has RLS enabled with `auth.uid() = user_id` policies (`shows`: catalog rows have `created_by` null and are public; user rows are owner-only). Schema changes go in a new timestamped file in `supabase/migrations/`; never edit an applied migration. Only the anon/publishable key goes in the browser, never the service-role key.
+- **Accounts**: email + password through Supabase Auth. Only `lib/auth.js` calls `supabase.auth`; components get it through `useAuth`. `App.jsx` shows `AuthPage` until there's a session (no React Router: the page switch is state). Offline copies are stored per user (`userStorageKey`), and Log out removes them. Without Supabase configured (and in tests, unless `<App authClient={fake} />`) the app runs device-only with no accounts.
+- **Database**: every table has RLS enabled; every policy is `to authenticated` with `auth.uid() = user_id` (`shows`: catalog rows have `created_by` null and are readable by logged-in users; user rows are owner-only). `anon` has no access. Every `user_id` is `not null default auth.uid()` — rows sent from the app never include `user_id`/`created_by`. Schema changes go in a new timestamped file in `supabase/migrations/` plus `supabase/schema.sql`; never edit an applied migration. Only the anon/publishable key goes in the browser, never the service-role key.
 - **Components**: function components, default export, one per file, file name = component name. Pure helpers go to `src/utils/`, not inside components.
 - **Styling**: use CSS custom properties from `:root` in `global.css` (`--red`, `--surface`, `--muted`, …) and BEM-ish names (`block__element`, `block--modifier`). Inline styles only for data-driven values (poster gradients). See @docs/DESIGN.md.
 - **Accessibility is required**: real `<button>`/`<input>` elements with accessible names, `aria-pressed` for toggles, dialogs with `role="dialog"`, `aria-modal`, focus on open, Escape to close.
@@ -94,17 +96,17 @@ The three course agents are copied word for word from the instructor's repos. Do
 
 ## MCP
 
-- **Supabase**: the app uses `@supabase/supabase-js`. Claude Code also has the Supabase MCP server (`.mcp.json`, project `xwewyxugdsabrqencnyv`) for migrations, SQL and advisors — keep the files in `supabase/migrations/` in step with what you apply. Users sign in anonymously (must be enabled in the dashboard under Authentication → Sign In / Providers).
+- **Supabase**: the app uses `@supabase/supabase-js`. Claude Code also has the Supabase MCP server (`.mcp.json`, project `xwewyxugdsabrqencnyv`) for migrations, SQL and advisors — keep the files in `supabase/migrations/` and `supabase/schema.sql` in step with what you apply. Users register and log in with email + password (Authentication → Sign In / Providers: Email on, Confirm email off for development, Anonymous sign-ins off). Supabase rejects test-only email domains like `example.com`.
 - **playwright**, **context7**, **chrome-devtools**: user-scoped (installed for every project per the SPA lecture). Playwright = drive a real browser; Context7 = current library docs; Chrome DevTools = console, network, performance.
 - **mobbin** (`.mcp.json`, HTTP `https://api.mobbin.com/mcp`) — UI reference search. Tools: `search_screens`, `search_flows`, `search_sections`. Always use `platform: "web"` and cite results by their `mobbin_url`.
 
 ## Current status
 
-- ✅ Supabase sync: anonymous sign-in, `list_entries` + `list_comments` tables with RLS, sync status shown under the title
-- ✅ Schema: `profiles` (auto-created per user), `genres` + `shows` catalog (public read-only), list rows linked to both
+- ✅ Authentication (Netflix Clone IV, 2026-10-19): Register (name, email, password ≥ 6), Log in, Log out, stays logged in on refresh, name + Log out in the header; database rebuilt with owner-only RLS (`20261019…` migrations, `supabase/schema.sql`)
+- ✅ Supabase sync: `list_entries` + `list_comments` + library tables, sync status shown under the title
+- ✅ Schema: `profiles` (auto-created per account by `on_auth_user_created`), `genres` + `shows` catalog (read-only for logged-in users), list rows linked to both
 - ✅ Your own titles: add a movie/series (form dialog), optionally straight to My List; delete it (cascades out of My List and lists)
 - ✅ Named lists: create, rename, delete; add/remove titles from the Lists section or from a show's dialog
-- ✅ `20261018000000_custom_shows_and_lists.sql` applied to the live project (via Supabase MCP, 2026-10-18)
 - ✅ My List: grid, rate 1–5★ (click again to clear), comments (add / edit / delete, spoiler flag, 500-char limit), watch status, filters with counts, sort, stats, add/remove shows, localStorage persistence
 - ⏳ Catalog still uses placeholder shows — waiting on the owner's real interests (use `content-curator`)
 - ⏳ Next sections to build: Home (hero banner + rows), search, profile

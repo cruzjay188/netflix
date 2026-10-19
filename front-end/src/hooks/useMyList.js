@@ -3,6 +3,7 @@ import { STARTER_LIST } from '../data/shows.js'
 import { supabase } from '../lib/supabase.js'
 import { createRemote, diffStates, isEmptyDiff } from '../lib/listSync.js'
 import { enqueue } from '../lib/session.js'
+import { userStorageKey } from '../utils/authUtils.js'
 
 export const STORAGE_KEY = 'myflix:my-list'
 
@@ -64,21 +65,25 @@ export function listReducer(state, action) {
   }
 }
 
-function loadState() {
+// A logged-in account starts with an empty list; the starter list is only for the
+// device-only mode (no Supabase configured).
+function loadState({ key, userId }) {
   try {
-    const saved = localStorage.getItem(STORAGE_KEY)
+    const saved = localStorage.getItem(key)
     if (saved) return JSON.parse(saved)
   } catch {
-    // Corrupt or blocked storage — fall back to the starter list.
+    // Corrupt or blocked storage — fall back to a fresh list.
   }
-  return createInitialState()
+  return userId ? {} : createInitialState()
 }
 
 const defaultRemote = supabase ? createRemote(supabase) : null
 
 // syncStatus: 'local' (no Supabase configured) | 'connecting' | 'synced' | 'error'
-export function useMyList({ remote = defaultRemote } = {}) {
-  const [list, dispatch] = useReducer(listReducer, undefined, loadState)
+// userId: the logged-in account, so its offline copy is kept apart from anyone else's.
+export function useMyList({ remote = defaultRemote, userId = null } = {}) {
+  const storageKey = userStorageKey(STORAGE_KEY, userId)
+  const [list, dispatch] = useReducer(listReducer, { key: storageKey, userId }, loadState)
   const [syncStatus, setSyncStatus] = useState(remote ? 'connecting' : 'local')
   const sent = useRef(null) // last state handed to Supabase; null until the first load finishes
   const confirmed = useRef(null) // last state Supabase acknowledged
@@ -86,11 +91,11 @@ export function useMyList({ remote = defaultRemote } = {}) {
   // localStorage is always written, so the list also works offline.
   useEffect(() => {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(list))
+      localStorage.setItem(storageKey, JSON.stringify(list))
     } catch {
       // Storage full or unavailable — the list still works for this session.
     }
-  }, [list])
+  }, [list, storageKey])
 
   // First load: cloud data wins; if the cloud is empty, the local list gets uploaded.
   useEffect(() => {
