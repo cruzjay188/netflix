@@ -45,4 +45,4 @@
 - A profile (name, avatar color) is created automatically when someone registers.
 - The catalog (genres + the built-in shows from `src/data/shows.js`) is shared: every logged-in user can read it, nobody can change it from the app. A user's own titles are private to them.
 - A comment belongs to one of the user's My List entries; a list item belongs to one of the user's own lists and can only point at a show they can see.
-- No seed data for users: a new account starts empty. The old test rows in `supabase/backups/` belonged to anonymous accounts and are not re-imported.
+- No seed data for users: a new account starts empty. The old test rows belonged to anonymous accounts and were not re-imported.

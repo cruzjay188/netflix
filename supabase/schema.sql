@@ -18,7 +18,7 @@
 --   • No database functions are called from the app (no supabase.rpc), so none are exposed.
 --   • Only Supabase's own functions exist besides set_updated_at and handle_new_user.
 --
--- Not included: the test rows in backups/ (they belonged to deleted anonymous accounts).
+-- Not included: the old test rows (they belonged to deleted anonymous accounts; see git commit c95edc9).
 -- ════════════════════════════════════════════════════════════════════════════
 
 

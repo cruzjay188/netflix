@@ -125,7 +125,7 @@ Every policy is `to authenticated` (logged-in users). Every `user_id` is `not nu
 | `20261016000000_my_list.sql` | `list_entries`, `list_comments`, RLS policies |
 | `20261016190000_profiles_catalog.sql` | `profiles` (+ sign-up trigger), `genres`, `shows` (+ seed), foreign keys, `updated_at` triggers |
 | `20261018000000_custom_shows_and_lists.sql` | `shows.created_by` + RLS for user-added titles, `lists`, `list_items`, cascade from shows to `list_entries` |
-| `20261019204059_reset_for_auth.sql` | Drops everything above and the old anonymous accounts (rows backed up in `supabase/backups/`) |
+| `20261019204059_reset_for_auth.sql` | Drops everything above and the old anonymous accounts (the old rows are in git history: commit `c95edc9`) |
 | `20261019204115_auth_profiles.sql` | Step 1: `profiles` as the authentication table + `on_auth_user_created` trigger |
 | `20261019204211_auth_tables.sql` | Step 2: the other six tables, empty, RLS on, catalog seed |
 | `20261019204234_auth_rls_policies.sql` | Step 3: table privileges + 17 owner-only RLS policies (`to authenticated`) |

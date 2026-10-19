@@ -46,7 +46,6 @@ front-end/      the React app (run npm commands here)
 supabase/       the database
   schema.sql    the whole current database in one file
   migrations/   the same changes, step by step
-  backups/      a copy of the test rows from before authentication
 docs/
   SCHEMA.md     database diagram (ERD) and table reference
   PROJECT_MAP.md  file-by-file map

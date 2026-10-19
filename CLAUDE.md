@@ -41,7 +41,6 @@ front-end/       the React app (package.json, vite.config.js, index.html, .env.l
 supabase/
   schema.sql   the whole current database in one file (keep it matching the live project)
   migrations/  the same SQL, step by step (run in Supabase SQL Editor or `supabase db push`)
-  backups/     the test rows from before authentication (don't re-import: they belong to deleted anonymous users)
 docs/
   PROJECT_MAP.md   current file-by-file map (maintained by project-mapper)
   SCHEMA.md        database ERD (Mermaid) + table reference — update with every migration
