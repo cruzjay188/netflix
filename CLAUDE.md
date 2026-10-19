@@ -97,7 +97,7 @@ The three course agents are copied word for word from the instructor's repos. Do
 - ✅ Schema: `profiles` (auto-created per user), `genres` + `shows` catalog (public read-only), list rows linked to both
 - ✅ Your own titles: add a movie/series (form dialog), optionally straight to My List; delete it (cascades out of My List and lists)
 - ✅ Named lists: create, rename, delete; add/remove titles from the Lists section or from a show's dialog
-- ⏳ Run `supabase/migrations/20261018000000_custom_shows_and_lists.sql` on the live project (SQL Editor) — until then the page shows "Cloud sync failed" and keeps lists on this device
+- ✅ `20261018000000_custom_shows_and_lists.sql` applied to the live project (via Supabase MCP, 2026-10-18)
 - ✅ My List: grid, rate 1–5★ (click again to clear), comments (add / edit / delete, spoiler flag, 500-char limit), watch status, filters with counts, sort, stats, add/remove shows, localStorage persistence
 - ⏳ Catalog still uses placeholder shows — waiting on the owner's real interests (use `content-curator`)
 - ⏳ Next sections to build: Home (hero banner + rows), search, profile

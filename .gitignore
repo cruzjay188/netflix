@@ -17,3 +17,6 @@ coverage/
 
 # Postman: the collection is committed; environments hold your local keys and tokens
 postman/environments/
+
+# Python bytecode (from skill scripts)
+__pycache__/
