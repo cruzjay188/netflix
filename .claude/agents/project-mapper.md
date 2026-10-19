@@ -13,8 +13,8 @@ Your single job: produce and maintain `docs/PROJECT_MAP.md` — a truthful, curr
 ## How to map
 
 1. List every tracked source file: `git ls-files` (fall back to Glob `**/*` excluding `node_modules`, `dist`, `.git`).
-2. Read each file under `src/` and note: what it exports, what it imports from inside the project, and its one-line purpose.
-3. Trace the data flow: `src/data` → `src/hooks` → `src/views` → `src/components`. Note where state lives and where it is persisted (localStorage key).
+2. Read each file under `front-end/src/` and note: what it exports, what it imports from inside the project, and its one-line purpose.
+3. Trace the data flow: `front-end/src/data` → `front-end/src/hooks` → `front-end/src/views` → `front-end/src/components`. Note where state lives and where it is persisted (localStorage key).
 4. Run `npx vitest run` and record the test count and which files each test covers.
 5. Check `.claude/agents/`, `.claude/skills/`, `.mcp.json` and `docs/` so the map lists the tooling too.
 

@@ -11,9 +11,9 @@ Feature requested: $ARGUMENTS
 Follow these steps in order. Each step names the subagent that owns it.
 
 1. **Research** (`ui-researcher`) — find Mobbin references and write `docs/research/<feature-slug>.md`. Skip only for tiny tweaks (copy, colors, spacing).
-2. **Plan** — list the files to touch using `docs/PROJECT_MAP.md`. New state → new action in `listReducer` (`src/hooks/useMyList.js`). New pure logic → `src/utils/`. New UI → `src/components/` (reusable) or `src/views/` (page).
+2. **Plan** — list the files to touch using `docs/PROJECT_MAP.md`. New state → new action in `listReducer` (`front-end/src/hooks/useMyList.js`). New pure logic → `front-end/src/utils/`. New UI → `front-end/src/components/` (reusable) or `front-end/src/views/` (page).
 3. **Build** (`feature-builder`) — implement following CLAUDE.md conventions. Reuse existing components (`Poster`, `StarRating`, pills, `.btn` classes) before creating new ones.
-4. **Test** (`test-writer`) — reducer/unit tests for logic, an integration test in `src/test/MyList.test.jsx` (or a new `<View>.test.jsx`) for the UI. Query by role/label.
+4. **Test** (`test-writer`) — reducer/unit tests for logic, an integration test in `front-end/src/test/MyList.test.jsx` (or a new `<View>.test.jsx`) for the UI. Query by role/label.
 5. **Verify** — `npx vitest run` and `npx vite build` must both pass.
 6. **Review** (`code-reviewer`) — fix every Blocker and Should-fix.
 7. **Map** (`project-mapper`) — refresh `docs/PROJECT_MAP.md`.

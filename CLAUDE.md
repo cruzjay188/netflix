@@ -8,7 +8,10 @@ React 19 · Vite 8 · Vitest 5 + React Testing Library + user-event (jsdom) · p
 
 ## Commands
 
+The project has two halves: `front-end/` (the React app) and `supabase/` (the database). Run every npm command inside `front-end/`. Start Claude Code in the root, where `.mcp.json` is.
+
 ```bash
+cd front-end
 npm run dev          # dev server → http://localhost:5173
 npm test             # vitest run (all tests once)
 npm run test:watch   # vitest watch mode
@@ -16,24 +19,28 @@ npm run build        # production build → dist/
 npm run preview      # serve dist/
 ```
 
-Supabase config lives in `.env.local` (gitignored; template in `.env.example`): `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`. Without it the app runs local-only. Restart `npm run dev` after changing it.
+Supabase config lives in `front-end/.env.local` (gitignored; template in `front-end/.env.example`): `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`. Without it the app runs local-only. Restart `npm run dev` after changing it.
 
 Before calling any change done: `npm test` and `npm run build` must both pass.
 
 ## Project layout
 
 ```
-src/
-  data/        show catalog + starter list (the ONLY place show content lives)
-  utils/       pure helpers: listUtils (filter, sort, average, timeAgo) and libraryUtils (show form, catalog, list names)
-  hooks/       useMyList (My List) and useLibrary (own titles + named lists) — reducer + localStorage + Supabase sync; useDialog
-  lib/         supabase.js (client or null), session.js (shared sign-in + write queue), listSync.js / librarySync.js (rows ⇄ state, diff, remote)
-  views/       page-level components (MyList)
-  components/  reusable UI (Header, Poster, StarRating, ShowCard, ListToolbar, ShowModal, CommentSection, AddShowModal, ListsSection, ListPicker, ListNameForm)
-  styles/      global.css — design tokens + all styles
-  test/        setup.js + *.test.js(x)
+front-end/       the React app (package.json, vite.config.js, index.html, .env.local)
+  app_outline/
+    user_journey.md  what a user can do, page by page (read by the auth prompts)
+  src/
+    data/        show catalog + starter list (the ONLY place show content lives)
+    utils/       pure helpers: listUtils (filter, sort, average, timeAgo) and libraryUtils (show form, catalog, list names)
+    hooks/       useMyList (My List) and useLibrary (own titles + named lists) — reducer + localStorage + Supabase sync; useDialog
+    lib/         supabase.js (client or null), session.js (shared sign-in + write queue), listSync.js / librarySync.js (rows ⇄ state, diff, remote)
+    views/       page-level components (MyList)
+    components/  reusable UI (Header, Poster, StarRating, ShowCard, ListToolbar, ShowModal, CommentSection, AddShowModal, ListsSection, ListPicker, ListNameForm)
+    styles/      global.css — design tokens + all styles
+    test/        setup.js + *.test.js(x)
 supabase/
   migrations/  SQL for tables + row-level security (run in Supabase SQL Editor or `supabase db push`)
+  backups/     the test rows from before authentication (don't re-import: they belong to deleted anonymous users)
 docs/
   PROJECT_MAP.md   current file-by-file map (maintained by project-mapper)
   SCHEMA.md        database ERD (Mermaid) + table reference — update with every migration

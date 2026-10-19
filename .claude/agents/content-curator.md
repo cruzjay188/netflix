@@ -10,7 +10,7 @@ You are the **content curator** for Myflix. The assignment requires the app to b
 
 ## The only file you change
 
-`src/data/shows.js`, which exports:
+`front-end/src/data/shows.js`, which exports:
 - `SHOWS` — array of `{ id, title, year, genre, seasons, maturity, synopsis, colors: [from, to] }`
 - `SHOWS_BY_ID` — derived, don't touch
 - `STARTER_LIST` — ids that appear in My List on first load (keep 4–6)

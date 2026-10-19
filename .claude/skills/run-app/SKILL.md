@@ -6,6 +6,8 @@ allowed-tools: Bash(npm run dev) Bash(npm run build) Bash(npm run test) Bash(npx
 
 # Run Myflix
 
+Run every command inside `front-end/` (where `package.json` lives): `cd front-end` first.
+
 | Goal | Command | Expect |
 |---|---|---|
 | Install deps (first time) | `npm install` | `node_modules/` created |
@@ -17,7 +19,7 @@ allowed-tools: Bash(npm run dev) Bash(npm run build) Bash(npm run test) Bash(npx
 
 ## Notes
 
-- Cloud sync needs `.env.local` (copy `.env.example`). Without it the page shows "Saved on this device" and everything still works. Restart the dev server after editing env vars.
+- Cloud sync needs `front-end/.env.local` (copy `front-end/.env.example`). Without it the page shows "Saved on this device" and everything still works. Restart the dev server after editing env vars.
 
 - Run the dev server in the background (`run_in_background`) so the session isn't blocked; stop it when done.
 - The app stores the user's list under the localStorage key `myflix:my-list`. To reset to the starter list, clear it in DevTools → Application → Local Storage, or run `localStorage.removeItem('myflix:my-list')` in the console.

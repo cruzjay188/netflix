@@ -11,6 +11,7 @@ Everything syncs to **Supabase** (and is also saved in the browser, so it works 
 ## Run it
 
 ```bash
+cd front-end
 npm install
 npm run dev     # open http://localhost:5173
 npm test        # run the test suite
@@ -22,23 +23,27 @@ npm run build   # production build
 1. Create a project at [supabase.com](https://supabase.com).
 2. In **SQL Editor**, run each file in `supabase/migrations/` in order (oldest first), or use the Supabase CLI: `supabase db push`.
 3. In **Authentication → Sign In / Providers**, turn on **Anonymous sign-ins**.
-4. Copy `.env.example` to `.env.local` and paste your Project URL and anon (publishable) key.
+4. Copy `front-end/.env.example` to `front-end/.env.local` and paste your Project URL and anon (publishable) key.
 5. Restart `npm run dev`. The page should say **Synced to cloud** under the title.
 
 ## How it's organized
 
 ```
-src/
-  data/         show catalog (shows.js)
-  utils/        pure helpers (filter, sort, average, timeAgo, show form, list names)
-  hooks/        useMyList (My List) + useLibrary (your titles and lists): state, localStorage, Supabase sync
-  lib/          Supabase client, shared sign-in + write queue, row ⇄ state sync
-  views/        pages (MyList)
-  components/   reusable UI (cards, modal, stars, comments, …)
-  styles/       global.css
-  test/         Vitest + React Testing Library tests
-supabase/
+front-end/      the React app (run npm commands here)
+  app_outline/  user_journey.md: what a user can do, page by page
+  src/
+    data/         show catalog (shows.js)
+    utils/        pure helpers (filter, sort, average, timeAgo, show form, list names)
+    hooks/        useMyList (My List) + useLibrary (your titles and lists): state, localStorage, Supabase sync
+    lib/          Supabase client, shared sign-in + write queue, row ⇄ state sync
+    views/        pages (MyList)
+    components/   reusable UI (cards, modal, stars, comments, …)
+    styles/       global.css
+    test/         Vitest + React Testing Library tests
+  index.html, package.json, vite.config.js, .env.example
+supabase/       the database
   migrations/   database tables, policies and seed data (run in order)
+  backups/      a copy of the test rows from before authentication
 docs/
   SCHEMA.md     database diagram (ERD) and table reference
   PROJECT_MAP.md  file-by-file map
