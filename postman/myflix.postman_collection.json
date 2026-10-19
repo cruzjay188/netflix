@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Myflix API (Supabase)",
-    "description": "Calls the Myflix Supabase project the same way the app does.\n\n1. Select the **Myflix (Supabase)** environment.\n2. Run **Auth → Sign in anonymously** first. It saves `accessToken`, `refreshToken` and `userId` to the environment.\n3. Every other request then runs as that user, so row-level security applies: you only see and change that user's list.\n\nEach anonymous sign-in is a new user with an empty list. To act as the user from your browser instead, paste the browser's token into `accessToken` (DevTools → Application → Local Storage → `sb-xwewyxugdsabrqencnyv-auth-token` → `access_token`).\n\nSchema: docs/SCHEMA.md",
+    "description": "Calls the Myflix Supabase project the same way the app does, with email + password accounts.\n\n1. Select the **Myflix (Supabase)** environment. It needs `baseUrl` (no /rest/v1), `apiKey` (publishable key), and two test accounts: `nameA`, `emailA`, `passwordA`, `nameB`, `emailB`, `passwordB`.\n2. Run **Auth** first: it registers both accounts (or finds them) and logs in. A's token goes in `accessToken`, B's in `tokenB`.\n3. Every other folder runs as A, so row-level security applies: you only see and change A's rows.\n4. **Security checks** logs in as B and tries to read and change A's rows. Every request has tests; use **Run collection** to see them all pass.\n\nSupabase only accepts real email domains (not example.com). Gmail's + trick gives you two accounts from one inbox.\n\nSchema: supabase/schema.sql · docs/SCHEMA.md",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -28,29 +28,12 @@
   ],
   "item": [
     {
-      "name": "Auth",
+      "name": "Auth (email + password)",
+      "description": "Run these first. Log in as A saves accessToken (used by every folder below) and Log in as B saves tokenB (used by Security checks).",
       "item": [
         {
-          "name": "Sign in anonymously",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('signed in', () => pm.response.to.have.status(200));",
-                  "const body = pm.response.json();",
-                  "pm.environment.set('accessToken', body.access_token);",
-                  "pm.environment.set('refreshToken', body.refresh_token);",
-                  "pm.environment.set('userId', body.user.id);"
-                ]
-              }
-            }
-          ],
+          "name": "Register account A",
           "request": {
-            "auth": {
-              "type": "noauth"
-            },
             "method": "POST",
             "header": [
               {
@@ -58,13 +41,166 @@
                 "value": "application/json"
               }
             ],
+            "url": "{{baseUrl}}/auth/v1/signup",
             "body": {
               "mode": "raw",
-              "raw": "{}"
+              "raw": "{ \"email\": \"{{emailA}}\", \"password\": \"{{passwordA}}\", \"data\": { \"name\": \"{{nameA}}\" } }"
             },
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Same as the app's Register page: email + password, and the name goes into the account's metadata (the database trigger copies it into profiles). Uses emailA / passwordA / nameA from the environment."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// 200 = new account. 422 = this email already has an account, which is fine: log in next.",
+                  "pm.test('account exists', () => pm.expect(pm.response.code).to.be.oneOf([200, 422]));",
+                  "if (pm.response.code === 422) pm.test('only because it already exists', () => pm.expect(pm.response.json().error_code).to.be.oneOf(['user_already_exists', 'email_exists']));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Register account B",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "url": "{{baseUrl}}/auth/v1/signup",
-            "description": "Creates a new anonymous user (anonymous sign-ins must be enabled in Supabase). Saves the tokens to the environment."
-          }
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"email\": \"{{emailB}}\", \"password\": \"{{passwordB}}\", \"data\": { \"name\": \"{{nameB}}\" } }"
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Same as the app's Register page: email + password, and the name goes into the account's metadata (the database trigger copies it into profiles). Uses emailB / passwordB / nameB from the environment."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// 200 = new account. 422 = this email already has an account, which is fine: log in next.",
+                  "pm.test('account exists', () => pm.expect(pm.response.code).to.be.oneOf([200, 422]));",
+                  "if (pm.response.code === 422) pm.test('only because it already exists', () => pm.expect(pm.response.json().error_code).to.be.oneOf(['user_already_exists', 'email_exists']));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Log in as A",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/auth/v1/token?grant_type=password",
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"email\": \"{{emailA}}\", \"password\": \"{{passwordA}}\" }"
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('logged in', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.environment.set('accessToken', body.access_token);",
+                  "pm.environment.set('refreshToken', body.refresh_token);",
+                  "pm.environment.set('userId', body.user.id);",
+                  "pm.environment.set('userIdA', body.user.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Log in as B",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/auth/v1/token?grant_type=password",
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"email\": \"{{emailB}}\", \"password\": \"{{passwordB}}\" }"
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('logged in', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.environment.set('tokenB', body.access_token);",
+                  "pm.environment.set('userIdB', body.user.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Wrong password is refused (400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/auth/v1/token?grant_type=password",
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"email\": \"{{emailA}}\", \"password\": \"not-the-password\" }"
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Supabase never says whether the email or the password was wrong, so nobody can use it to find out who has an account."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('refused', () => pm.response.to.have.status(400));",
+                  "pm.test('same answer for wrong email or wrong password', () => pm.expect(pm.response.json().error_code).to.eql('invalid_credentials'));"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "Refresh token",
@@ -111,7 +247,7 @@
       ]
     },
     {
-      "name": "Catalog (public)",
+      "name": "Catalog (logged-in users)",
       "item": [
         {
           "name": "List shows with genre",
@@ -128,14 +264,14 @@
           }
         },
         {
-          "name": "Try to add a show (blocked by RLS)",
+          "name": "Try to add a catalog show (blocked by RLS)",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('catalog is read-only', () => pm.expect(pm.response.code).to.be.oneOf([401, 403]));"
+                  "pm.test('catalog is read-only (403)', () => pm.response.to.have.status(403));"
                 ]
               }
             }
@@ -150,10 +286,10 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{ \"id\": \"not-allowed\", \"title\": \"Not allowed\", \"release_year\": 2026, \"maturity_rating\": \"TV-14\", \"genre_id\": 1 }"
+              "raw": "{\"id\": \"not-allowed\", \"title\": \"Not allowed\", \"release_year\": 2026, \"maturity_rating\": \"TV-14\", \"genre_id\": 1, \"created_by\": null}"
             },
             "url": "{{baseUrl}}/rest/v1/shows",
-            "description": "Expected to fail: the catalog can only be changed through migrations."
+            "description": "Expected to fail with 403: catalog rows (created_by null) can only be added through migrations. Your own titles work: see Your titles & lists → Add my own movie."
           }
         }
       ]
@@ -184,7 +320,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{ \"display_name\": \"Jay\", \"avatar_color\": \"#46d369\" }"
+              "raw": "{ \"display_name\": \"{{nameA}}\", \"avatar_color\": \"#46d369\" }"
             },
             "url": "{{baseUrl}}/rest/v1/profiles?id=eq.{{userId}}"
           }
@@ -212,16 +348,28 @@
               },
               {
                 "key": "Prefer",
-                "value": "return=representation"
+                "value": "return=representation,resolution=merge-duplicates"
               }
             ],
             "body": {
               "mode": "raw",
               "raw": "{ \"show_id\": \"arcane\", \"status\": \"want\" }"
             },
-            "url": "{{baseUrl}}/rest/v1/list_entries",
-            "description": "user_id defaults to the signed-in user. show_id must exist in shows."
-          }
+            "url": "{{baseUrl}}/rest/v1/list_entries?on_conflict=user_id,show_id",
+            "description": "No user_id in the body: the database fills it in from your token (default auth.uid()). show_id must exist in shows."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('saved', () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));",
+                  "pm.test('owner filled in from the token', () => pm.expect(pm.response.json()[0].user_id).to.eql(pm.environment.get('userIdA')));"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "Rate a show",
@@ -241,19 +389,6 @@
               "mode": "raw",
               "raw": "{ \"rating\": 5, \"status\": \"finished\" }"
             },
-            "url": "{{baseUrl}}/rest/v1/list_entries?show_id=eq.arcane"
-          }
-        },
-        {
-          "name": "Remove a show (also deletes its comments)",
-          "request": {
-            "method": "DELETE",
-            "header": [
-              {
-                "key": "Prefer",
-                "value": "return=representation"
-              }
-            ],
             "url": "{{baseUrl}}/rest/v1/list_entries?show_id=eq.arcane"
           }
         }
@@ -308,6 +443,19 @@
           "request": {
             "method": "DELETE",
             "url": "{{baseUrl}}/rest/v1/list_comments?id=eq.{{commentId}}"
+          }
+        },
+        {
+          "name": "Remove a show (also deletes its comments)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Prefer",
+                "value": "return=representation"
+              }
+            ],
+            "url": "{{baseUrl}}/rest/v1/list_entries?show_id=eq.arcane"
           }
         }
       ]
@@ -458,6 +606,448 @@
             "method": "DELETE",
             "url": "{{baseUrl}}/rest/v1/lists?id=eq.{{listId}}"
           }
+        }
+      ]
+    },
+    {
+      "name": "Security checks (RLS)",
+      "description": "Proves each account only sees and changes its own rows. Run Auth first.\n\n- **Stranger** = only the publishable key, no login (role anon) → 401.\n- **B** = logged in as account B, trying to read or change account A's rows.\n  Reading is a *filter*: you get [] (200), not an error. Writing someone else's row is a *gate*: 403.\n  Updating or deleting someone else's row finds 0 rows, so nothing happens.",
+      "item": [
+        {
+          "name": "Setup: A saves Arcane",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Prefer",
+                "value": "return=representation,resolution=merge-duplicates"
+              }
+            ],
+            "url": "{{baseUrl}}/rest/v1/list_entries?on_conflict=user_id,show_id",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"show_id\": \"arcane\", \"rating\": 5}"
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('A has Arcane', () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Stranger reads My List → 401",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/rest/v1/list_entries?select=*",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{apiKey}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('not logged in = refused', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Stranger reads the catalog → 401",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/rest/v1/shows?select=id,title",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{apiKey}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('not logged in = refused', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "B reads My List → only B's rows",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/rest/v1/list_entries?select=user_id,show_id",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenB}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const rows = pm.response.json();",
+                  "pm.test('every row is B\\'s', () => rows.forEach((r) => pm.expect(r.user_id).to.eql(pm.environment.get('userIdB'))));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "B asks for A's rows by id → []",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/rest/v1/list_entries?user_id=eq.{{userIdA}}",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenB}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('RLS filters them out', () => pm.expect(pm.response.json()).to.eql([]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "B reads A's profile → []",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/rest/v1/profiles?id=eq.{{userIdA}}",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenB}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('RLS filters it out', () => pm.expect(pm.response.json()).to.eql([]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "B saves a row as A → 403",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/rest/v1/list_entries",
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"user_id\": \"{{userIdA}}\", \"show_id\": \"wednesday\" }"
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenB}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('blocked by RLS', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "B rates A's Arcane → nothing changes",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Prefer",
+                "value": "return=representation"
+              }
+            ],
+            "url": "{{baseUrl}}/rest/v1/list_entries?user_id=eq.{{userIdA}}&show_id=eq.arcane",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"rating\": 1}"
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenB}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('0 rows updated', () => pm.expect(pm.response.json()).to.eql([]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "B deletes A's Arcane → nothing deleted",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Prefer",
+                "value": "return=representation"
+              }
+            ],
+            "url": "{{baseUrl}}/rest/v1/list_entries?user_id=eq.{{userIdA}}&show_id=eq.arcane",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenB}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('0 rows deleted', () => pm.expect(pm.response.json()).to.eql([]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "B adds a genre → 403",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/rest/v1/genres",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\": \"Hacked\"}"
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenB}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('genres are read-only', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "A still has Arcane, still 5 stars",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/rest/v1/list_entries?show_id=eq.arcane&select=show_id,rating",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('untouched by B', () => pm.expect(pm.response.json()).to.eql([{ show_id: 'arcane', rating: 5 }]));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Log out",
+      "item": [
+        {
+          "name": "Log out A",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/auth/v1/logout",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "Same as the app's Log out button. Ends the session, so its refresh token stops working. (An access token is a signed pass: it stays valid until it expires, about an hour, which is why the app also forgets it.)"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('logged out', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "After log out: refresh is refused",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/auth/v1/token?grant_type=refresh_token",
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"refresh_token\": \"{{refreshToken}}\" }"
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('session is over', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
         }
       ]
     }
