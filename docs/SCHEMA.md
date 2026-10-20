@@ -41,12 +41,14 @@ erDiagram
         text title
         text kind "series | movie"
         smallint release_year
-        smallint seasons "null for movies"
-        text maturity_rating "TV-Y ... TV-MA, G ... NC-17"
+        smallint seasons "null for movies and TMDB series"
+        text maturity_rating "TV-Y ... TV-MA, G ... NC-17, NR"
         text synopsis
         smallint genre_id FK
         uuid created_by FK "profiles.id; null = built-in catalog"
         timestamptz created_at
+        integer tmdb_id "TMDB titles only; unique per user"
+        text poster_url "TMDB titles only"
     }
 
     lists {
@@ -106,6 +108,7 @@ Every policy is `to authenticated` (logged-in users). Every `user_id` is `not nu
 - **shows → list_entries (1:N)**: a list row must point at a real catalog show. Adding a show to `front-end/src/data/shows.js` also needs an insert in a new migration.
 - **genres → shows (1:N)**: each show has one genre.
 - **profiles → shows (1:N, custom titles)**: `created_by` marks a title a user added. Deleting the title cascades to its My List row, comments and list items.
+- **TMDB titles**: adding a show from TMDB saves it as one of the user's own titles, with `tmdb_id`, `poster_url`, maturity `NR` (Not Rated) and TMDB's first genre. `unique (created_by, tmdb_id)` stops a user saving the same TMDB show twice.
 - **profiles → lists → list_items (1:N:N)**: deleting a list deletes its items. `list_items` points at `lists (id, user_id)`, so an item can only go in its owner's list.
 - **shows → list_items (1:N)**: the same title can be in many lists.
 - `updated_at` columns are maintained by the `set_updated_at()` trigger.
@@ -118,6 +121,8 @@ Every policy is `to authenticated` (logged-in users). Every `user_id` is `not nu
 
 `front-end/src/lib/librarySync.js` does the same for the library: `showToRow` / `listToRow` / `itemToRow` going up, `rowsToLibrary` coming down. It reads and writes the user's own `shows` rows, `lists` and `list_items`, and reads `genres` to turn genre names into ids. Built-in show details on screen still come from `front-end/src/data/shows.js`.
 
+`front-end/src/lib/tmdb.js` never touches the database: it calls the `tmdb` Edge Function (`supabase/functions/tmdb/`), which holds the TMDB key (Supabase Secret `TMDB_API_KEY`) and returns trimmed show data.
+
 ## Migrations
 
 | File | Adds |
@@ -129,5 +134,6 @@ Every policy is `to authenticated` (logged-in users). Every `user_id` is `not nu
 | `20261019204115_auth_profiles.sql` | Step 1: `profiles` as the authentication table + `on_auth_user_created` trigger |
 | `20261019204211_auth_tables.sql` | Step 2: the other six tables, empty, RLS on, catalog seed |
 | `20261019204234_auth_rls_policies.sql` | Step 3: table privileges + 17 owner-only RLS policies (`to authenticated`) |
+| `20261020170000_tmdb_titles.sql` | `shows.tmdb_id` + `poster_url`, one save per TMDB show per user, `NR` rating, TMDB's TV genres (applied with `npx supabase db query --linked -f`) |
 
-To set up a fresh Supabase project, paste `supabase/schema.sql` into the SQL Editor and Run (it equals the last three migrations). Then in **Authentication → Sign In / Providers**: Email on, and for development **Confirm email** off.
+To set up a fresh Supabase project, paste `supabase/schema.sql` into the SQL Editor and Run (it equals the last four migrations). Then in **Authentication → Sign In / Providers**: Email on, and for development **Confirm email** off.

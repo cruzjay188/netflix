@@ -1,7 +1,7 @@
 -- ════════════════════════════════════════════════════════════════════════════
--- Myflix: the whole database, as it is now (rebuilt for authentication, 2026-10-19).
+-- Myflix: the whole database, as it is now (rebuilt for authentication 2026-10-19; TMDB titles 2026-10-20).
 -- Run on an EMPTY Supabase project (SQL Editor → paste → Run) to recreate everything.
--- The same SQL, step by step, is in migrations/20261019204115…, …204211…, …204234….
+-- The same SQL, step by step, is in migrations/20261019204115…, …204211…, …204234…, 20261020170000….
 --
 --   auth.users 1─1 profiles 1─* list_entries *─1 shows *─1 genres
 --                           1─* list_comments (each on one of your list_entries)
@@ -106,13 +106,19 @@ create table public.shows (
   title           text        not null,
   kind            text        not null default 'series' check (kind in ('series', 'movie')),
   release_year    smallint    not null check (release_year between 1900 and 2100),
-  seasons         smallint    check (seasons > 0),                                   -- null for movies
-  maturity_rating text        not null check (maturity_rating in ('TV-Y', 'TV-Y7', 'TV-G', 'TV-PG', 'TV-14', 'TV-MA', 'G', 'PG', 'PG-13', 'R', 'NC-17')),
+  seasons         smallint    check (seasons > 0),                                   -- null for movies (and TMDB series)
+  -- 'NR' = Not Rated: TMDB titles, whose lists don't include a rating
+  maturity_rating text        not null check (maturity_rating in ('TV-Y', 'TV-Y7', 'TV-G', 'TV-PG', 'TV-14', 'TV-MA', 'G', 'PG', 'PG-13', 'R', 'NC-17', 'NR')),
   synopsis        text        not null default '',
   genre_id        smallint    not null references public.genres (id),
   -- null = built-in catalog show; otherwise the user who added it (filled in by the database)
   created_by      uuid        default auth.uid() references public.profiles (id) on delete cascade,
-  created_at      timestamptz not null default now()
+  created_at      timestamptz not null default now(),
+  -- titles added from TMDB (null otherwise): TMDB's id for the show and its poster image
+  tmdb_id         integer     check (tmdb_id > 0),
+  poster_url      text        check (poster_url like 'https://image.tmdb.org/%'),
+  -- a user saves each TMDB show once (nulls never clash)
+  constraint shows_created_by_tmdb_id_key unique (created_by, tmdb_id)
 );
 
 create index shows_genre_id_idx   on public.shows (genre_id);
@@ -189,7 +195,10 @@ alter table public.list_items    enable row level security;
 -- ── Catalog seed (mirrors front-end/src/data/shows.js; created_by stays null) ──
 insert into public.genres (name) values
   ('Sci-Fi'), ('Mystery'), ('Fantasy'), ('Adventure'), ('Sports Docuseries'),
-  ('Thriller'), ('Comedy'), ('Food Docuseries'), ('Animation');
+  ('Thriller'), ('Comedy'), ('Food Docuseries'), ('Animation'),
+  -- TMDB's TV genres (Animation, Comedy and Mystery are above)
+  ('Action & Adventure'), ('Crime'), ('Documentary'), ('Drama'), ('Family'), ('Kids'), ('News'),
+  ('Reality'), ('Sci-Fi & Fantasy'), ('Soap'), ('Talk'), ('War & Politics'), ('Western');
 
 insert into public.shows (id, title, kind, release_year, seasons, maturity_rating, synopsis, genre_id, created_by) values
   ('stranger-things', 'Stranger Things', 'series', 2016, 5, 'TV-14',

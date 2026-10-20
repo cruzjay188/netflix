@@ -27,10 +27,10 @@ export default function ShowModal({ entry, lists, actions, listActions, onClose 
                 {show.seasons} season{show.seasons > 1 ? 's' : ''}
               </span>
             ) : (
-              <span>Movie</span>
+              <span>{show.kind === 'series' ? 'Series' : 'Movie'}</span>
             )}
             <span>{show.genre}</span>
-            {show.custom && <span className="pill">Added by you</span>}
+            {show.custom && <span className="pill">{show.tmdbId ? 'From TMDB' : 'Added by you'}</span>}
           </p>
           {show.synopsis && <p className="modal__synopsis">{show.synopsis}</p>}
 

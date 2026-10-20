@@ -102,6 +102,7 @@ h1, h2, h3, p { margin: 0; }
   aspect-ratio: 16 / 9; display: flex; align-items: flex-end; padding: 12px;
 }
 .poster::after { content: ''; position: absolute; inset: 0; background: linear-gradient(0deg, rgba(0,0,0,.55), transparent 60%); }
+.poster__img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .poster__badge { position: absolute; top: 6px; left: 8px; color: var(--red); font-weight: 900; font-size: 18px; z-index: 1; }
 .poster__title { position: relative; z-index: 1; font-weight: 800; font-size: 20px; line-height: 1.1; text-shadow: 0 2px 6px rgba(0,0,0,.6); }
 .poster--hero { aspect-ratio: 16 / 7; border-radius: var(--radius) var(--radius) 0 0; padding: 32px 40px; }
@@ -137,7 +138,15 @@ h1, h2, h3, p { margin: 0; }
   border: 2px solid rgba(255,255,255,.8); background: rgba(20,20,20,.7);
   font-size: 20px; line-height: 1;
 }
-.add-btn:hover { border-color: #fff; background: #fff; color: #000; }
+.add-btn:not(:disabled):hover { border-color: #fff; background: #fff; color: #000; }
+.add-btn:disabled { border-color: transparent; background: var(--red); color: #fff; opacity: 1; }
+.suggestion__meta { margin: 6px 2px 0; font-size: 13px; color: var(--muted); }
+
+/* TMDB section */
+.tmdb-search { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.tmdb-search input { flex: 1 1 200px; max-width: 280px; }
+.tmdb-error { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.tmdb-error .form-error { flex-basis: auto; margin: 0; }
 
 /* Modal */
 .backdrop {
@@ -210,11 +219,11 @@ h1, h2, h3, p { margin: 0; }
 /* Forms */
 .field { display: grid; gap: 6px; }
 .field .label { margin-bottom: 0; }
-.field input, .field select, .field textarea, .list-name-form input, .list-block__add select {
+.field input, .field select, .field textarea, .list-name-form input, .tmdb-search input, .list-block__add select {
   background: var(--surface-2); border: 1px solid var(--border); border-radius: 4px; padding: 8px 10px;
 }
 .field textarea { resize: vertical; line-height: 1.4; }
-.field input:focus, .field select:focus, .field textarea:focus, .list-name-form input:focus { border-color: #888; outline: none; }
+.field input:focus, .field select:focus, .field textarea:focus, .list-name-form input:focus, .tmdb-search input:focus { border-color: #888; outline: none; }
 .form-error { color: #ff6b6b; font-size: 14px; flex-basis: 100%; }
 
 /* Add-a-title dialog */

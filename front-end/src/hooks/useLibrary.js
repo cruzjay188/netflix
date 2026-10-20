@@ -9,7 +9,8 @@ import { isListNameTaken } from '../utils/libraryUtils.js'
 export const LIBRARY_KEY = 'myflix:library'
 
 // State: {
-//   customShows: { [showId]: { id, title, kind, year, seasons (null for movies), genre, maturity, synopsis, createdAt } },
+//   customShows: { [showId]: { id, title, kind, year, seasons (null for movies), genre, maturity, synopsis, createdAt,
+//                              tmdbId?, posterUrl? (titles added from TMDB) } },
 //   lists: { [listId]: { name, createdAt, items: { [showId]: addedAt } } },
 // }
 export const EMPTY_LIBRARY = { customShows: {}, lists: {} }

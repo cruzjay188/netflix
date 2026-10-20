@@ -1,7 +1,7 @@
 import { SHOWS } from '../data/shows.js'
 
-// Must match the check constraint on shows.maturity_rating.
-export const MATURITY_RATINGS = ['TV-Y', 'TV-Y7', 'TV-G', 'TV-PG', 'TV-14', 'TV-MA', 'G', 'PG', 'PG-13', 'R', 'NC-17']
+// Must match the check constraint on shows.maturity_rating. 'NR' = Not Rated (TMDB titles).
+export const MATURITY_RATINGS = ['TV-Y', 'TV-Y7', 'TV-G', 'TV-PG', 'TV-14', 'TV-MA', 'G', 'PG', 'PG-13', 'R', 'NC-17', 'NR']
 
 export const KINDS = { movie: 'Movie', series: 'Series' }
 
@@ -41,6 +41,27 @@ export function formToShow(form) {
     maturity: form.maturity,
     synopsis: form.synopsis.trim(),
   }
+}
+
+// A TMDB result (lib/tmdb.js) as fields for addShow. TMDB's lists have no maturity rating or
+// season count. The card image is the wide backdrop when there is one, else the tall poster.
+export function tmdbToShow(result) {
+  return {
+    title: result.name,
+    kind: 'series',
+    year: result.year,
+    seasons: null,
+    genre: result.genre,
+    maturity: 'NR',
+    synopsis: result.overview ?? '',
+    tmdbId: result.id,
+    posterUrl: result.backdrop_url ?? result.poster_url ?? null,
+  }
+}
+
+// The user's saved copy of a TMDB show, or null when they haven't added it yet.
+export function findTmdbShow(customShows, tmdbId) {
+  return Object.values(customShows).find((show) => show.tmdbId === tmdbId) ?? null
 }
 
 // Custom titles have no artwork, so pick a gradient from the id (same id → same colors).

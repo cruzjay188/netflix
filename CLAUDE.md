@@ -33,14 +33,16 @@ front-end/       the React app (package.json, vite.config.js, index.html, .env.l
     data/        show catalog + starter list (the ONLY place show content lives)
     utils/       pure helpers: listUtils (filter, sort, average, timeAgo), libraryUtils (show form, catalog, list names), authUtils (form checks, error messages, per-user storage keys)
     hooks/       useAuth (session + profile), useMyList (My List) and useLibrary (own titles + named lists) — reducer + localStorage + Supabase sync; useDialog
-    lib/         supabase.js (client or null), auth.js (register / log in / log out / profile), session.js (write queue), listSync.js / librarySync.js (rows ⇄ state, diff, remote)
+    lib/         supabase.js (client or null), auth.js (register / log in / log out / profile), session.js (write queue), listSync.js / librarySync.js (rows ⇄ state, diff, remote), tmdb.js (calls the tmdb Edge Function)
     views/       page-level components (MyList, AuthPage = Log in / Register)
-    components/  reusable UI (Header, Poster, StarRating, ShowCard, ListToolbar, ShowModal, CommentSection, AddShowModal, ListsSection, ListPicker, ListNameForm)
+    components/  reusable UI (Header, Poster, StarRating, ShowCard, ListToolbar, ShowModal, CommentSection, AddShowModal, ListsSection, ListPicker, ListNameForm, TmdbSection)
     styles/      global.css — design tokens + all styles
     test/        setup.js + *.test.js(x)
 supabase/
   schema.sql   the whole current database in one file (keep it matching the live project)
-  migrations/  the same SQL, step by step (run in Supabase SQL Editor or `supabase db push`)
+  migrations/  the same SQL, step by step (applied with `npx supabase db query --linked -f <file>`; NOT `db push`, the remote history has different timestamps for Oct 16–18)
+  functions/   Edge Functions (Deno): hello-world, tmdb. Deploy: `npx supabase functions deploy <name> --use-api`
+  config.toml  Supabase CLI settings (linked to project xwewyxugdsabrqencnyv)
 docs/
   PROJECT_MAP.md   current file-by-file map (maintained by project-mapper)
   SCHEMA.md        database ERD (Mermaid) + table reference — update with every migration
@@ -101,6 +103,7 @@ The three course agents are copied word for word from the instructor's repos. Do
 
 ## Current status
 
+- ✅ TMDB (Netflix Clone V, 2026-10-20): `tmdb` Edge Function (logged-in users only; TMDB key in Supabase Secrets `TMDB_API_KEY` + gitignored root `.env`, never in `VITE_` vars). Trending row + search above "Add to My List"; adding a TMDB show saves it as the user's own title (`tmdb_id`, `poster_url`, maturity `NR`) once, then puts it on My List
 - ✅ Authentication (Netflix Clone IV, 2026-10-19): Register (name, email, password ≥ 6), Log in, Log out, stays logged in on refresh, name + Log out in the header; database rebuilt with owner-only RLS (`20261019…` migrations, `supabase/schema.sql`)
 - ✅ Supabase sync: `list_entries` + `list_comments` + library tables, sync status shown under the title
 - ✅ Schema: `profiles` (auto-created per account by `on_auth_user_created`), `genres` + `shows` catalog (read-only for logged-in users), list rows linked to both

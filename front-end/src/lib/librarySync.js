@@ -20,6 +20,7 @@ export function showToRow(show, genreIds) {
     synopsis: show.synopsis,
     genre_id: genreId,
     created_at: iso(show.createdAt),
+    ...(show.tmdbId && { tmdb_id: show.tmdbId, poster_url: show.posterUrl }),
   }
 }
 
@@ -44,6 +45,7 @@ export function rowsToLibrary(showRows, listRows, itemRows) {
       maturity: row.maturity_rating,
       synopsis: row.synopsis,
       createdAt: Date.parse(row.created_at),
+      ...(row.tmdb_id && { tmdbId: row.tmdb_id, posterUrl: row.poster_url }),
     }
   }
   const lists = {}

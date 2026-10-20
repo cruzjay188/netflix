@@ -23,12 +23,13 @@ Font: Helvetica Neue → Helvetica → Arial. Header 26px/900 logo; page title 3
 | Component | File | Notes |
 |---|---|---|
 | Header | `components/Header.jsx` | Sticky, gradient; nav hidden ≤700px |
-| Poster | `components/Poster.jsx` | Generated art: 135° gradient of `show.colors` + title. Sizes `card` (16:9) and `hero` (16:7) |
+| Poster | `components/Poster.jsx` | Generated art: 135° gradient of `show.colors` + title. Sizes `card` (16:9) and `hero` (16:7). TMDB titles draw their image (`show.posterUrl`, `object-fit: cover`, `alt=""`) over the gradient; the title stays on top |
 | StarRating | `components/StarRating.jsx` | Interactive (5 buttons, hover preview, `aria-pressed`) or `readOnly` compact display |
 | ShowCard | `components/ShowCard.jsx` | Poster + status pill + small stars + comment count; scales 1.04 on hover/focus |
 | ListToolbar | `components/ListToolbar.jsx` | Filter chips with counts + sort `<select>` |
 | ShowModal | `components/ShowModal.jsx` | Netflix-style detail dialog: hero, facts, synopsis, rating, status, comments, remove |
 | CommentSection | `components/CommentSection.jsx` | Form (textarea, counter, spoiler checkbox) + list with edit/delete/reveal |
+| TmdbSection | `components/TmdbSection.jsx` | "Trending on TMDB" row + search (`role="search"`). Each tile: Poster, round `+` (`.add-btn`; becomes a red disabled ✓ when on My List), "year · genre" caption. Loading (`role="status"`), error with Try again (`role="alert"`), no-results states |
 
 ## Reusable classes
 
@@ -41,6 +42,7 @@ Font: Helvetica Neue → Helvetica → Arial. Header 26px/900 logo; page title 3
 
 - **Toggles** are buttons with `aria-pressed`; selected = white background, black text.
 - **Empty states**: centered muted sentence telling the user what to do next.
+- **Remote data** (TMDB): muted "Loading…" status, then the content; on failure a red message plus a Try again button. Same-named shows are told apart by year in the caption and the button's accessible name.
 - **Spoilers**: striped gold cover button; the text renders only after a click.
 - **Responsive**: one breakpoint at 700px (smaller grid columns, tighter modal padding, nav hidden).
 

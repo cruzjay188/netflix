@@ -1,8 +1,9 @@
 import { useCallback, useMemo, useState } from 'react'
 import { useLibrary } from '../hooks/useLibrary.js'
 import { useMyList } from '../hooks/useMyList.js'
+import { tmdb as defaultTmdb } from '../lib/tmdb.js'
 import { FILTERS, averageRating, combineSyncStatus, filterEntries, sortEntries } from '../utils/listUtils.js'
-import { buildCatalog, sortedLists } from '../utils/libraryUtils.js'
+import { buildCatalog, findTmdbShow, sortedLists, tmdbToShow } from '../utils/libraryUtils.js'
 import AddShowModal from '../components/AddShowModal.jsx'
 import ListToolbar from '../components/ListToolbar.jsx'
 import ListsSection from '../components/ListsSection.jsx'
@@ -10,9 +11,11 @@ import ShowCard from '../components/ShowCard.jsx'
 import ShowModal from '../components/ShowModal.jsx'
 import Poster from '../components/Poster.jsx'
 import SyncStatus from '../components/SyncStatus.jsx'
+import TmdbSection from '../components/TmdbSection.jsx'
 
 // userId: the logged-in account (null in the device-only mode).
-export default function MyList({ userId = null }) {
+// tmdb: TMDB client (lib/tmdb.js); null without Supabase, which hides the TMDB section.
+export default function MyList({ userId = null, tmdb = defaultTmdb }) {
   // useLibrary comes first on purpose: its effects run first, so a newly added title is queued
   // for Supabase before the My List entry that points at it.
   const { library, syncStatus: librarySync, ...libraryActions } = useLibrary({ userId })
@@ -39,6 +42,10 @@ export default function MyList({ userId = null }) {
   const commentTotal = entries.reduce((sum, e) => sum + e.comments.length, 0)
   const suggestions = Object.values(catalog).filter((s) => !list[s.id])
   const openEntry = openId && entries.find((e) => e.show.id === openId)
+  const onListTmdbIds = useMemo(
+    () => new Set(entries.filter((e) => e.show.tmdbId).map((e) => e.show.tmdbId)),
+    [entries],
+  )
 
   const listActions = {
     toggle: (showId, listId) =>
@@ -55,6 +62,12 @@ export default function MyList({ userId = null }) {
   function addShow(fields, alsoAddToMyList) {
     const id = libraryActions.addShow(fields)
     if (alsoAddToMyList) actions.add(id)
+  }
+
+  // A TMDB show becomes one of the user's own titles (saved once), then goes on My List.
+  function addFromTmdb(result) {
+    const saved = findTmdbShow(library.customShows, result.id)
+    actions.add(saved ? saved.id : libraryActions.addShow(tmdbToShow(result)))
   }
 
   return (
@@ -94,6 +107,8 @@ export default function MyList({ userId = null }) {
           </ul>
         )}
       </section>
+
+      {tmdb && <TmdbSection tmdb={tmdb} onListIds={onListTmdbIds} onAdd={addFromTmdb} />}
 
       <section className="suggestions" aria-labelledby="suggestions-heading">
         <div className="section-head">
